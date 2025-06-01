@@ -1,0 +1,52 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+#Vcpackages
+vcpkg_installed
+
+# Build directories
+build/
+bin/
+lib/
+cmake-*
+
+# IDE specific files
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+*.vscode/
+*.idea/
+*.vs/
+
+# Temporary folder
+tmp
