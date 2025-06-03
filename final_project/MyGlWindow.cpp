@@ -26,15 +26,6 @@
  */
 
 #include "MyGlWindow.h"
-#include "MoverFactory.h"
-
-#include <chrono>
-#include <iostream>
-
-#include <FL/Fl_Button.H>
-
-#include "DrawUtils.h"
-#include "timing.h"
 
 static double DEFAULT_VIEW_POINT[3] = {30, 30, 30};
 static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
@@ -61,6 +52,119 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
     TimingData::init();
     run = 0;
     selected = -1;
+
+    // Initialize the physics world
+    physicsWorld = new cyclone::World(20); // Allow up to 20 contacts
+
+    // TODO: Create and add rigid bodies for the hole and other objects
+    createGameObjects();
+}
+
+MyGlWindow::~MyGlWindow()
+{
+    // Clean up the physics world
+    delete physicsWorld;
+
+    // TODO: Clean up rigid bodies
+
+    // Clean up rigid bodies
+    for (auto body : gameRigidBodies)
+    {
+        delete body;
+    }
+}
+
+void MyGlWindow::createGameObjects()
+{
+    // Create rigid body for the hole
+    holeBody = new cyclone::RigidBody();
+
+    // Set hole properties
+    holeBody->setInverseMass(0); // Infinite mass so it's not affected by forces
+
+    // Set inverse inertia tensor to zero for infinite inertia
+    holeBody->setInverseInertiaTensor(cyclone::Matrix3(0,0,0, 0,0,0, 0,0,0));
+
+    holeBody->setDamping(0.9, 0.9); // Add some damping
+    holeBody->setAcceleration(cyclone::Vector3::GRAVITY * 0); // No gravity
+    holeBody->setPosition(cyclone::Vector3(0, 1, 0)); // Set initial position
+
+    // Add the hole rigid body to our list of game objects
+    gameRigidBodies.push_back(holeBody);
+
+    // TODO: Set hole properties and add to physicsWorld
+
+    // Create rigid bodies for other objects
+    // Example: a cube object
+    cyclone::RigidBody* cubeBody = new cyclone::RigidBody();
+    // Set cube properties (example values)
+    cyclone::real cubeMass = 10.0; // Example mass
+    cyclone::real cubeSize = 2.0; // Example size for inertia tensor calculation
+    cyclone::real cubeInverseMass = 1.0 / cubeMass;
+
+    // Manually calculate inverse inertia tensor for a cube
+    cyclone::real cubeI = (static_cast<cyclone::real>(1.0)/static_cast<cyclone::real>(6.0)) * cubeMass * cubeSize * cubeSize;
+    cyclone::real cubeInverseI = (cubeI > 0) ? static_cast<cyclone::real>(1.0) / cubeI : 0;
+    cyclone::Matrix3 cubeInverseInertiaTensor(
+        cubeInverseI, 0, 0,
+        0, cubeInverseI, 0,
+        0, 0, cubeInverseI
+    );
+
+    cubeBody->setInverseMass(cubeInverseMass);
+    cubeBody->setInverseInertiaTensor(cubeInverseInertiaTensor);
+    cubeBody->setDamping(0.9, 0.9);
+    cubeBody->setAcceleration(cyclone::Vector3::GRAVITY);
+    cubeBody->setPosition(cyclone::Vector3(5, 2, 5)); // Example initial position
+    gameRigidBodies.push_back(cubeBody);
+
+    // Create a sphere object
+    cyclone::RigidBody* sphereBody = new cyclone::RigidBody();
+    // Set sphere properties (example values)
+    cyclone::real sphereMass = 5.0; // Example mass
+    cyclone::real sphereRadius = 1.5; // Example radius
+    cyclone::real sphereInverseMass = 1.0 / sphereMass;
+
+    // Manually calculate inverse inertia tensor for a sphere
+    cyclone::real sphereI = (static_cast<cyclone::real>(2.0)/static_cast<cyclone::real>(5.0)) * sphereMass * sphereRadius * sphereRadius;
+    cyclone::real sphereInverseI = (sphereI > 0) ? static_cast<cyclone::real>(1.0) / sphereI : 0;
+    cyclone::Matrix3 sphereInverseInertiaTensor(
+        sphereInverseI, 0, 0,
+        0, sphereInverseI, 0,
+        0, 0, sphereInverseI
+    );
+
+    sphereBody->setInverseMass(sphereInverseMass);
+    sphereBody->setInverseInertiaTensor(sphereInverseInertiaTensor);
+    sphereBody->setDamping(0.9, 0.9);
+    sphereBody->setAcceleration(cyclone::Vector3::GRAVITY);
+    sphereBody->setPosition(cyclone::Vector3(-5, 3, -5)); // Example initial position
+    gameRigidBodies.push_back(sphereBody);
+
+    // Create another cube object
+    cyclone::RigidBody* cubeBody2 = new cyclone::RigidBody();
+    // Set cube properties (example values)
+    cyclone::real cubeMass2 = 15.0; // Example mass
+    cyclone::real cubeSize2 = 3.0; // Example size
+    cyclone::real cubeInverseMass2 = 1.0 / cubeMass2;
+
+    // Manually calculate inverse inertia tensor for the second cube
+    cyclone::real cubeI2 = (static_cast<cyclone::real>(1.0)/static_cast<cyclone::real>(6.0)) * cubeMass2 * cubeSize2 * cubeSize2;
+    cyclone::real cubeInverseI2 = (cubeI2 > 0) ? static_cast<cyclone::real>(1.0) / cubeI2 : 0;
+     cyclone::Matrix3 cubeInverseInertiaTensor2(
+        cubeInverseI2, 0, 0,
+        0, cubeInverseI2, 0,
+        0, 0, cubeInverseI2
+    );
+
+    cubeBody2->setInverseMass(cubeInverseMass2);
+    cubeBody2->setInverseInertiaTensor(cubeInverseInertiaTensor2);
+    cubeBody2->setDamping(0.9, 0.9);
+    cubeBody2->setAcceleration(cyclone::Vector3::GRAVITY);
+    cubeBody2->setPosition(cyclone::Vector3(10, 4, -10)); // Example initial position
+    gameRigidBodies.push_back(cubeBody2);
+
+    // TODO: Create and add rigid bodies for other objects
 }
 
 void MyGlWindow::setupLight(float x, float y, float z) {
@@ -180,6 +284,47 @@ void MyGlWindow::draw() {
 
     glDisable(GL_BLEND);
 
+    // Draw rigid bodies
+    glPushMatrix();
+    for (auto body : gameRigidBodies)
+    {
+        // Get the transform matrix from the rigid body
+        float transform[16];
+        body->getGLTransform(transform);
+
+        // Apply the transform to the modelview matrix
+        glPushMatrix();
+        glMultMatrixf(transform);
+
+        // Draw a placeholder shape (e.g., a cube or sphere)
+        // We need to define a size for the objects. Using a placeholder size for now.
+        float objectSize = 1.0f; // Example size
+        if (body == holeBody) {
+            // Draw a visual representation for the hole (e.g., a transparent cylinder or disc)
+            // This is a placeholder - actual hole rendering will be more complex
+            glColor4f(0.0f, 0.0f, 0.0f, 0.5f); // Semi-transparent black
+            // Example: Draw a disc on the ground plane
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(0.0f, 0.1f, 0.0f); // Center slightly above ground
+            int segments = 30;
+            float radius = holeSwallowRadius; // Use the dynamic swallowing radius
+            for (int i = 0; i <= segments; ++i) {
+                float angle = 2.0f * static_cast<float>(M_PI) * float(i) / float(segments);
+                glVertex3f(std::cos(angle) * radius, 0.1f, std::sin(angle) * radius);
+            }
+            glEnd();
+
+        } else {
+             // Draw a cube for other objects
+            glColor3f(0.5f, 0.3f, 0.0f); // Example color (brown)
+             glutSolidCube(objectSize * 2.0f); // glutSolidCube draws a cube of side 2
+        }
+
+
+        glPopMatrix(); // Restore the modelview matrix
+    }
+    glPopMatrix();
+
     // Draw objects
     glPushMatrix();
     if (!m_movers.empty()) {
@@ -212,12 +357,14 @@ void MyGlWindow::resetTest() {
 }
 
 void MyGlWindow::update() {
+    std::cout << "Update method called." << std::endl; // Debug print
     TimingData::update();
 
     if (!run)
         return;
 
     const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
+    // std::cout << "Duration: " << duration << std::endl; // Debug print duration
 
     if (!m_moverConnection.empty()) {
         for (auto &mover: m_moverConnection) {
@@ -232,10 +379,105 @@ void MyGlWindow::update() {
     if (duration <= 0.0f)
         return;
 
-    if (!m_movers.empty())
-        for (const auto mover: m_movers)
-            mover.second->update(duration);
+    // Start the physics frame
+    physicsWorld->startFrame();
 
+    // Calculate and set hole velocity based on input flags
+    cyclone::Vector3 holeVelocity = cyclone::Vector3(0, 0, 0);
+    cyclone::real moveSpeed = 10.0; // Adjust speed as needed
+
+    std::cout << "Move Flags: Forward=" << moveForward << ", Backward=" << moveBackward << ", Left=" << moveLeft << ", Right=" << moveRight << std::endl; // Debug print flags
+
+    if (moveForward) holeVelocity.z = moveSpeed;
+    if (moveBackward) holeVelocity.z = -moveSpeed;
+    if (moveLeft) holeVelocity.x = -moveSpeed;
+    if (moveRight) holeVelocity.x = moveSpeed;
+
+    // Keep existing vertical velocity if needed, or set to 0 for horizontal-only movement
+    // holeVelocity.y = holeBody->getVelocity().y; // Keep vertical velocity
+    holeVelocity.y = 0; // Restrict to horizontal movement
+
+    holeBody->setVelocity(holeVelocity);
+    std::cout << "Calculated hole velocity: " << holeVelocity.x << ", " << holeVelocity.y << ", " << holeVelocity.z << std::endl; // Debug print calculated velocity
+
+    // TODO: Apply forces based on input and other factors
+    // (Input handling now sets flags, velocity is set here)
+
+    // Integrate rigid bodies manually
+    for (auto body : gameRigidBodies)
+    {
+        // std::cout << "Body position before integrate: " << body->getPosition().x << ", " << body->getPosition().y << ", " << body->getPosition().z << std::endl; // Debug print position before
+        // std::cout << "Body velocity before integrate: " << body->getVelocity().x << ", " << body->getVelocity().y << ", " << body->getVelocity().z << std::endl; // Debug print velocity before
+
+        if (body == holeBody) {
+             std::cout << "Hole position before integrate: " << body->getPosition().x << ", " << body->getPosition().y << ", " << body->getPosition().z << std::endl; // Debug print hole position before
+             std::cout << "Hole velocity before integrate: " << body->getVelocity().x << ", " << body->getVelocity().y << ", " << body->getVelocity().z << std::endl; // Debug print hole velocity before
+        }
+
+        body->integrate(duration);
+
+        if (body == holeBody) {
+            std::cout << "Hole position after integrate: " << body->getPosition().x << ", " << body->getPosition().y << ", " << body->getPosition().z << std::endl; // Debug print hole position after
+            std::cout << "Hole velocity after integrate: " << body->getVelocity().x << ", " << body->getVelocity().y << ", " << body->getVelocity().z << std::endl; // Debug print hole velocity after
+        }
+
+        // std::cout << "Body position after integrate: " << body->getPosition().x << ", " << body->getPosition().y << ", " << body->getPosition().z << std::endl; // Debug print position after
+        // std::cout << "Body velocity after integrate: " << body->getVelocity().x << ", " << body->getVelocity().y << ", " << body->getVelocity().z << std::endl; // Debug print velocity after
+    }
+
+    // Run the physics simulation (this might be for contact resolution etc. if bodies were added)
+    // physicsWorld->runPhysics(duration); // Keep this commented for now as we manually integrate
+
+    // Check for objects to be swallowed by the hole
+    cyclone::Vector3 holePosition = holeBody->getPosition();
+    float holeSwallowRadius = 7.0f; // Example radius for swallowing
+
+    for (auto it = gameRigidBodies.begin(); it != gameRigidBodies.end(); )
+    {
+        cyclone::RigidBody* currentBody = *it;
+
+        // Don't check for swallowing with the hole itself
+        if (currentBody == holeBody) {
+            ++it;
+            continue;
+        }
+
+        cyclone::Vector3 objectPosition = currentBody->getPosition();
+        cyclone::Vector3 displacement = objectPosition - holePosition;
+        float distance = displacement.magnitude();
+
+        // Placeholder: Check if object is close to the hole
+        if (distance < holeSwallowRadius)
+        {
+            // If the object is within the swallowing radius, apply a force pulling it towards the hole
+            cyclone::Vector3 pullDirection = displacement.unit();
+            // Increase pull force as the object gets closer
+            float pullForceMagnitude = (holeSwallowRadius - distance) * 20.0f; // Adjust force multiplier as needed
+            cyclone::Vector3 pullForce = pullDirection * pullForceMagnitude;
+            currentBody->addForce(pullForce);
+
+            // Check if the object is very close to be considered swallowed
+            if (distance < holeSwallowRadius * 0.5f) // Swallowing threshold (e.g., half the radius)
+            {
+                std::cout << "Object swallowed! Distance: " << distance << std::endl;
+
+                // Remove the swallowed object
+                delete currentBody; // Free memory
+                it = gameRigidBodies.erase(it); // Remove from vector and get iterator to the next element
+
+                // Increase hole size (example: increment radius)
+                holeSwallowRadius += 0.5f; // Adjust increment as needed
+
+                // Since an object was removed, we continue the loop with the next iterator
+                continue;
+            }
+        }
+
+        // If the object was not swallowed or is still being pulled, move to the next object
+        ++it;
+    }
+
+    // Existing updates for particles/movers (may need to adapt or remove)
     if (!m_moverConnection.empty()) {
         for (auto &mover: m_moverConnection) {
             mover->update(duration);
@@ -280,13 +522,6 @@ void MyGlWindow::doPick() {
         }
     }
 
-    // Draw the cubes, loading the names as we go
-    // for (size_t i = 0; i < world->points.size(); ++i) {
-    //     glLoadName((GLuint)(i + 1));
-    //	   draw();
-    // }
-
-
     // Go back to drawing mode, and see how picking did
     if (int hits = glRenderMode(GL_RENDER)) {
         // warning; this just grabs the first object hit - if there
@@ -299,7 +534,6 @@ void MyGlWindow::doPick() {
         // nothing hit, nothing selected
         selected = -1;
     }
-    // printf("Selected Cube %d\n", selectedCube);
 }
 
 
@@ -449,6 +683,23 @@ int MyGlWindow::handle(int e)
             return 1;
         case FL_KEYBOARD:
             key = Fl::event_key();
+            // Handle WASD input for hole movement
+            {
+                if (key == 'w' || key == 'W') {
+                    std::cout << "Moving forward" << std::endl;
+                    moveForward = true;
+                } else if (key == 's' || key == 'S') {
+                    std::cout << "Moving backward" << std::endl;
+                    moveBackward = true;
+                } else if (key == 'a' || key == 'A') {
+                    std::cout << "Moving left" << std::endl;
+                    moveLeft = true;
+                } else if (key == 'd' || key == 'D') {
+                    std::cout << "Moving right" << std::endl;
+                    moveRight = true;
+                }
+            }
+
             if (key == FL_Up) { // Use the Up arrow key for unzoom
                 m_viewer->zoom(-0.1f); // Adjust the zoom factor as needed
                 redraw();
@@ -459,7 +710,28 @@ int MyGlWindow::handle(int e)
                 redraw();
                 return 1;
             }
-            return 0;
+            // Return 1 to indicate that the keyboard event was handled
+            return 1;
+        case FL_KEYUP:
+            key = Fl::event_key();
+            // Handle WASD key releases
+            {
+                if (key == 'w' || key == 'W') {
+                    std::cout << "Moving forward released" << std::endl;
+                    moveForward = false;
+                } else if (key == 's' || key == 'S') {
+                    std::cout << "Moving backward released" << std::endl;
+                    moveBackward = false;
+                } else if (key == 'a' || key == 'A') {
+                    std::cout << "Moving left released" << std::endl;
+                    moveLeft = false;
+                } else if (key == 'd' || key == 'D') {
+                    std::cout << "Moving right released" << std::endl;
+                    moveRight = false;
+                }
+            }
+            return 1;
+
         default:
             return Fl_Gl_Window::handle(e);
     }
@@ -523,14 +795,6 @@ void MyGlWindow::putText(const char *str, int x, int y, float r, float g, float 
 }
 
 void MyGlWindow::setProjectileMode() const {
-    // if (m_mover) {
-    // 	// Logic to choose the mode of the projectile
-    // 	// For example, cycle through the projectile types
-    // 	int currentType = m_mover->getProjectileType();
-    // 	int nextType = (currentType + 1) % 5; // Assuming 5 projectile types
-    // 	m_mover->setProjectileType(static_cast<enum Mover::projectileType>(nextType));
-    // 	(m_mover->*(m_mover->projectileMap[m_mover->getProjectileType()]))();
-    // }
     if (!m_movers.empty()) {
         for (auto mover: m_movers) {
             // Logic to choose the mode of the projectile

@@ -26,24 +26,6 @@
  * THE SOFTWARE.
  */
 
-#define NOMINMAX
-
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#endif
-
-#include <ctime>
-#include <iostream>
-
-#include <FL/Fl.H>
-#include <FL/Fl_Box.H>
-#include <FL/Fl_Button.H>
-#include <FL/Fl_Choice.H>
-#include <FL/Fl_Counter.H>
-#include <FL/Fl_Gl_Window.H>
-#include <FL/Fl_Light_Button.H>
-#include <FL/Fl_Value_Slider.H>
-
 #include "MyGlWindow.h"
 
 long lastRedraw;

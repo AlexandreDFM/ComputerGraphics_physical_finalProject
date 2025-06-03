@@ -25,40 +25,56 @@
  * THE SOFTWARE.
  */
 
+#ifndef MYGLWINDOW_H
+#define MYGLWINDOW_H
+
 #define NOMINMAX
-
-
-#include <FL/Fl.H>
-#include <FL/Fl_Gl_Window.H>
-#include <FL/Fl_Value_Slider.H>
+#define M_PI 3.14159265358979323846
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #endif
 
-#include <FL/Fl_Double_Window.H>
+#include <FL/Fl.H>
+#include <FL/Fl_Box.H>
+#include <FL/Fl_Button.H>
+#include <FL/Fl_Choice.H>
+#include <FL/Fl_Counter.H>
+#include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Light_Button.H>
+#include <FL/Fl_Value_Slider.H>
+#include <FL/Fl_Double_Window.H>
+
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 
-#include "math.h"
-#include "stdio.h"
-
-#include <vector>
 #include "core.h"
+#include "math.h"
+#include "body.h"
+#include "stdio.h"
+#include "world.h"
+#include "timing.h"
+#include "precision.h"
 
-#include "Mover.h"
-#include "MoverConnection.h"
+#include <ctime>
+#include <vector>
+#include <chrono>
+#include <iostream>
 
-#include "3DUtils.h"
 #include "Vec3f.h"
 #include "Viewer.h"
+#include "3DUtils.h"
+#include "DrawUtils.h"
 
+#include "Mover.h"
+#include "MoverFactory.h"
+#include "MoverConnection.h"
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
     MyGlWindow(int x, int y, int w, int h);
+    ~MyGlWindow();
 
     Fl_Light_Button *ui;
     Fl_Slider *time;
@@ -75,6 +91,8 @@ public:
     const char *getProjectileMode() const;
     void step();
 
+    void createGameObjects();
+
 private:
     void draw(); // standard FlTk
     int handle(int); // standard FlTk
@@ -84,7 +102,22 @@ private:
     std::map<int, Mover *> m_movers;
     std::vector<MoverConnection *> m_moverConnection;
 
+    cyclone::World *physicsWorld;
+
+    // Rigid bodies for game objects
+    std::vector<cyclone::RigidBody*> gameRigidBodies;
+    cyclone::RigidBody* holeBody;
+    float holeSwallowRadius = 5.0f;
+
+    // Movement state flags
+    bool moveForward = false;
+    bool moveBackward = false;
+    bool moveLeft = false;
+    bool moveRight = false;
+
     void setProjection(int clearProjection = 1);
     void getMouseNDC(float &x, float &y);
     void setupLight(float x, float y, float z);
 };
+
+#endif /* MYGLWINDOW_H */
