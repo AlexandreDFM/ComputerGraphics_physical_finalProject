@@ -69,9 +69,8 @@
 
 #include "Floor.h"
 #include "Mover.h"
-#include "MoverConnection.h"
-#include "MoverFactory.h"
 #include "PlayerCube.h"
+#include "MoverFactory.h"
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -83,7 +82,6 @@ public:
 
     int run;
     void update();
-    void drawStuff();
     void doPick();
     void resetTest();
     int selected;

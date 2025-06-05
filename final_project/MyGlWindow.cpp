@@ -34,7 +34,6 @@ static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
 static double DEFAULT_UP_VECTOR[3] = {0, 1, 0};
 
 MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
-
     mode(FL_RGB | FL_ALPHA | FL_DOUBLE | FL_STENCIL);
 
     fieldOfView = 45;
@@ -120,7 +119,6 @@ void MyGlWindow::setupLight(float x, float y, float z) {
     glLightfv(GL_LIGHT2, GL_POSITION, lightPosition3);
     glLightfv(GL_LIGHT2, GL_DIFFUSE, whiteLight);
 
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
@@ -131,11 +129,6 @@ void setupObjects() {
     glStencilFunc(GL_ALWAYS, 0x0, 0x0);
     glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
     glStencilMask(0x1); // only deal with the 1st bit
-}
-
-void MyGlWindow::drawStuff() {
-    glColor4f(1, 1, 0, 0.5);
-    polygonf(4, 20., 0., -25., 20., 0., 25., -20., 30., 25., -20., 30., -25.);
 }
 
 void MyGlWindow::draw() {
@@ -177,18 +170,12 @@ void MyGlWindow::draw() {
 
     glEnable(GL_COLOR_MATERIAL);
 
-    // Draw rigid bodies
-    // glPushMatrix();
     for (auto body: gameRigidBodies) {
         if (body == playerCube->getBody()) {
-            // Debug print player cube position before drawing
-            // std::cout << "Drawing PlayerCube at position: (" << playerCube->getBody()->getPosition().x << ", " << playerCube->getBody()->getPosition().y << ", " << playerCube->getBody()->getPosition().z << ")" << std::endl;
             playerCube->draw();
         }
     }
-    // glPopMatrix();
 
-    // Draw UI text
     putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
     putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);
 }
@@ -206,9 +193,6 @@ void MyGlWindow::update() {
     TimingData::update();
 
     const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
-
-    // Debug print the duration
-    // std::cout << "Update duration: " << duration << std::endl;
 
     if (duration <= 0.0f)
         return;
@@ -276,12 +260,6 @@ void MyGlWindow::doPick() {
         }
     }
 
-    if (!m_moverConnection.empty()) {
-        for (auto &mover: m_moverConnection) {
-            mover->draw(0);
-        }
-    }
-
     // Go back to drawing mode, and see how picking did
     if (int hits = glRenderMode(GL_RENDER)) {
         // warning; this just grabs the first object hit - if there
@@ -329,72 +307,13 @@ int MyGlWindow::handle(int e) {
     static cyclone::Vector3 p1, p2;
     static double t1, t2;
     int key;
+    bool wasPressed = false;
 
     switch (e) {
-        case FL_KEYBOARD:
-            key = Fl::event_key();
-            // Handle WASD input for player cube movement
-            if (key == 'w' || key == 'W') {
-                moveForward = true;
-                playerCube->setColor(1.0f, 0.0f, 0.0f); // Red
-                redraw();
-                return 1;
-            } else if (key == 's' || key == 'S') {
-                moveBackward = true;
-                playerCube->setColor(0.0f, 1.0f, 0.0f); // Green
-                redraw();
-                return 1;
-            } else if (key == 'a' || key == 'A') {
-                moveLeft = true;
-                playerCube->setColor(0.0f, 0.0f, 1.0f); // Blue
-                redraw();
-                return 1;
-            } else if (key == 'd' || key == 'D') {
-                moveRight = true;
-                playerCube->setColor(1.0f, 1.0f, 0.0f); // Yellow
-                redraw();
-                return 1;
-            }
-            break;
-
-        case FL_KEYUP:
-            key = Fl::event_key();
-            // Handle WASD key releases
-            if (key == 'w' || key == 'W' || key == 'z' || key == 'Z') {
-                moveForward = true;
-                playerCube->setColor(1.0f, 0.0f, 0.0f);
-                playerCube->setMoveSpeed(1.0f); // Stop moving forward
-                redraw();
-                return 1;
-            } else if (key == 's' || key == 'S') {
-                moveBackward = true;
-                playerCube->setColor(0.0f, 1.0f, 0.0f);
-                playerCube->setMoveSpeed(1.0f); // Stop moving backward
-                redraw();
-                return 1;
-            } else if (key == 'a' || key == 'A' || key == 'q' || key == 'Q') {
-                moveLeft = true;
-                playerCube->setColor(0.0f, 0.0f, 1.0f);
-                playerCube->setMoveSpeed(1.0f); // Stop moving left
-                redraw();
-                return 1;
-            } else if (key == 'd' || key == 'D') {
-                moveRight = true;
-                playerCube->setColor(1.0f, 0.4f, 0.7f);
-                playerCube->setMoveSpeed(1.0f); // Stop moving right
-                redraw();
-                return 1;
-            }
-            break;
-
         case FL_SHOW:
-            // you must handle this, or not be seen!
             show();
             return 1;
-        case FL_FOCUS:
-        case FL_UNFOCUS:
-             // Keep default handling for focus/unfocus events
-             return Fl_Gl_Window::handle(e);
+        case FL_FOCUS: case FL_UNFOCUS: return 1;
         case FL_PUSH:
             // Take focus when the window is clicked
             take_focus();
@@ -497,7 +416,55 @@ int MyGlWindow::handle(int e) {
             }
             redraw();
             return 1;
-
+        case FL_KEYBOARD:
+            key = Fl::event_key();
+            if (key == FL_Right) {
+                std::cout << "Exiting application." << std::endl;
+                return 1;
+            }
+            switch (key) {
+                case 'w': case 'W': case 'z': case 'Z':
+                    wasPressed = true;
+                    moveForward = true;
+                    resetTest();
+                    playerCube->setColor(1.0f, 0.0f, 0.0f);
+                    break;
+                case 's': case 'S':
+                    wasPressed = true;
+                    moveBackward = true;
+                    playerCube->setColor(0.0f, 1.0f, 0.0f);
+                    break;
+                case 'a': case 'A': case 'q': case 'Q':
+                    wasPressed = true;
+                    moveLeft = true;
+                    playerCube->setColor(0.0f, 0.0f, 1.0f);
+                    step();
+                    break;
+                case 'd': case 'D':
+                    wasPressed = true;
+                    moveRight = true;
+                    playerCube->setColor(1.0f, 1.0f, 0.0f);
+                    break;
+                case FL_Up :
+                    m_viewer->zoom(-0.1f);
+                    redraw();
+                    return 1;
+                case FL_Down :
+                    m_viewer->zoom(0.1f);
+                    redraw();
+                    return 1;
+                default:
+                    moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    redraw();
+                    break;
+            }
+            if (wasPressed) {
+                playerCube->setMoveSpeed(1.0f);
+                redraw();
+                return 1;
+            }
+            return 0;
         default:
             return Fl_Gl_Window::handle(e);
     }
