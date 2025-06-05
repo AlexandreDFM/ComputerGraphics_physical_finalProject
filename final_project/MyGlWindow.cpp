@@ -60,9 +60,6 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
 
     // Create game objects
     createGameObjects();
-
-    // Explicitly take focus when the window is created
-    take_focus();
 }
 
 MyGlWindow::~MyGlWindow() {
@@ -174,8 +171,14 @@ void MyGlWindow::draw() {
     glEnd();
     glLineWidth(1.0f);
 
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+    glEnable(GL_COLOR_MATERIAL);
+
     // Draw rigid bodies
-    glPushMatrix();
+    // glPushMatrix();
     for (auto body: gameRigidBodies) {
         if (body == playerCube->getBody()) {
             // Debug print player cube position before drawing
@@ -183,7 +186,7 @@ void MyGlWindow::draw() {
             playerCube->draw();
         }
     }
-    glPopMatrix();
+    // glPopMatrix();
 
     // Draw UI text
     putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
@@ -225,11 +228,11 @@ void MyGlWindow::update() {
                 float size = 2.0f; // Assuming objects are cubes of size 2
 
                 // If object is below floor level, bounce it back up
-                if (pos.y < size / 2) {
+                if (pos.y < 5.0f) {
                     cyclone::Vector3 velocity = body->getVelocity();
                     velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
                     body->setVelocity(velocity);
-                    pos.y = size / 2; // Set position to floor level
+                    pos.y = 4.0f; // Set position to floor level
                     body->setPosition(pos);
                 }
 
@@ -357,24 +360,28 @@ int MyGlWindow::handle(int e) {
         case FL_KEYUP:
             key = Fl::event_key();
             // Handle WASD key releases
-            if (key == 'w' || key == 'W') {
-                moveForward = false;
-                playerCube->setColor(1.0f, 0.4f, 0.7f); // Back to pink
+            if (key == 'w' || key == 'W' || key == 'z' || key == 'Z') {
+                moveForward = true;
+                playerCube->setColor(1.0f, 0.0f, 0.0f);
+                playerCube->setMoveSpeed(1.0f); // Stop moving forward
                 redraw();
                 return 1;
             } else if (key == 's' || key == 'S') {
-                moveBackward = false;
-                playerCube->setColor(1.0f, 0.4f, 0.7f); // Back to pink
+                moveBackward = true;
+                playerCube->setColor(0.0f, 1.0f, 0.0f);
+                playerCube->setMoveSpeed(1.0f); // Stop moving backward
                 redraw();
                 return 1;
-            } else if (key == 'a' || key == 'A') {
-                moveLeft = false;
-                playerCube->setColor(1.0f, 0.4f, 0.7f); // Back to pink
+            } else if (key == 'a' || key == 'A' || key == 'q' || key == 'Q') {
+                moveLeft = true;
+                playerCube->setColor(0.0f, 0.0f, 1.0f);
+                playerCube->setMoveSpeed(1.0f); // Stop moving left
                 redraw();
                 return 1;
             } else if (key == 'd' || key == 'D') {
-                moveRight = false;
-                playerCube->setColor(1.0f, 0.4f, 0.7f); // Back to pink
+                moveRight = true;
+                playerCube->setColor(1.0f, 0.4f, 0.7f);
+                playerCube->setMoveSpeed(1.0f); // Stop moving right
                 redraw();
                 return 1;
             }
@@ -576,16 +583,5 @@ const char *MyGlWindow::getProjectileMode() const {
 void MyGlWindow::step() {
     TimingData::update();
 
-    float duration = 0.03f; // or 0.06
-
-    for (auto mover: m_movers) {
-        mover.second->update(duration);
-    }
-
-    std::cout << "step" << std::endl;
-}
-
-int MyGlWindow::take_focus() {
-    // Explicitly take focus and return 1
-    return Fl_Gl_Window::take_focus();
+    float duration = 0.03f;
 }

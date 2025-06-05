@@ -92,7 +92,6 @@ public:
 
     const char *getProjectileMode() const;
     void step();
-    int take_focus();
 
     void createGameObjects();
 

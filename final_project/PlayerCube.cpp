@@ -1,22 +1,21 @@
 #include "PlayerCube.h"
 #include <GL/glut.h>
-#include <iostream>
 
 PlayerCube::PlayerCube() :
     moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
-    cubeSize(2.0f), // 2x2x2 cube
+    cubeSize(2.0f),
     colorR(1.0f), colorG(0.4f), colorB(0.7f) // Initial pink color
 {
     // Create rigid body for the player cube
     body = new cyclone::RigidBody();
 
     // Set cube properties
-    body->setInverseMass(0); // Infinite mass so it's not affected by forces
+    body->setInverseMass(0);
     body->setInverseInertiaTensor(cyclone::Matrix3(0, 0, 0, 0, 0, 0, 0, 0, 0));
     body->setDamping(0.9, 0.9);
-    body->setAcceleration(cyclone::Vector3::GRAVITY * 0); // No gravity
-    body->setPosition(cyclone::Vector3(0, cubeSize / 2, 0)); // Set initial position at half height (bottom on floor)
-    body->setVelocity(cyclone::Vector3(0, 0, 0)); // Initialize velocity to zero
+    body->setAcceleration(cyclone::Vector3::GRAVITY * 0);
+    body->setPosition(cyclone::Vector3(0, 2.0f, 0)); // Start at a more reasonable height
+    body->setVelocity(cyclone::Vector3(0, 0, 0));
 }
 
 PlayerCube::~PlayerCube() { delete body; }
@@ -59,15 +58,15 @@ void PlayerCube::update(float duration) {
     // Update position
     cyclone::Vector3 currentPos = body->getPosition();
     cyclone::Vector3 newPos = currentPos + velocity * duration;
-    newPos.y = cubeSize / 2; // Keep the cube's center at half height
 
     // Update position and velocity
     body->setPosition(newPos);
     body->setVelocity(velocity);
+    body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
 void PlayerCube::draw() {
-    float transform[16];
+    GLfloat transform[16];
     body->getGLTransform(transform);
 
     glPushMatrix();
@@ -85,15 +84,12 @@ void PlayerCube::draw() {
 }
 
 void PlayerCube::setPosition(const cyclone::Vector3 &pos) {
-    cyclone::Vector3 newPos = pos;
-    newPos.y = cubeSize / 2; // Keep the cube's center at half height
-    body->setPosition(newPos);
+    body->setPosition(pos);
+    body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
 void PlayerCube::setColor(float r, float g, float b) {
     colorR = r;
     colorG = g;
     colorB = b;
-    // Log when color changes
-    std::cout << "PlayerCube color changed to: (" << colorR << ", " << colorG << ", " << colorB << ")" << std::endl;
 }
