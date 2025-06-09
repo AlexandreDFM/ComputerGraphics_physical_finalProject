@@ -25,9 +25,9 @@
  * THE SOFTWARE.
  */
 
+#include "MyGlWindow.h"
 #include <FL/Fl.H>
 #include <cyclone.h>
-#include "MyGlWindow.h"
 
 static double DEFAULT_VIEW_POINT[3] = {30, 30, 30};
 static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
@@ -197,10 +197,7 @@ void MyGlWindow::update() {
     if (duration <= 0.0f)
         return;
 
-    // Update player cube movement based on movement flags
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
-
-    // Update player cube
     playerCube->update(duration);
 
     // Handle physics simulation for other objects if running
@@ -313,10 +310,10 @@ int MyGlWindow::handle(int e) {
         case FL_SHOW:
             show();
             return 1;
-        case FL_FOCUS: case FL_UNFOCUS: return 1;
+        case FL_FOCUS:
+        case FL_UNFOCUS:
+            return 1;
         case FL_PUSH:
-            // Take focus when the window is clicked
-            take_focus();
             m_pressedMouseButton = Fl::event_button();
             m_lastMouseX = Fl::event_x();
             m_lastMouseY = Fl::event_y();
@@ -352,15 +349,15 @@ int MyGlWindow::handle(int e) {
                 }
                 m_movers[selected]->m_particle->setVelocity(newVelocity);
 
-                run = 1; // Enable the simulation
-                ui->value(1); // Turn on the run button
+                run = 1;
+                ui->value(1);
                 selected = -1;
                 damage(1);
                 return 1;
             }
             m_pressedMouseButton = 0;
             break;
-        case FL_DRAG: // if the user drags the mouse
+        case FL_DRAG:
             if (selected >= 0 && m_pressedMouseButton == 1) {
 
                 double r1x, r1y, r1z, r2x, r2y, r2z;
@@ -385,20 +382,16 @@ int MyGlWindow::handle(int e) {
                 const double fractionChangeY =
                         static_cast<double>(m_lastMouseY - Fl::event_y()) / static_cast<double>(this->h());
 
-                // ALT+Click for camera movement
                 if (Fl::event_state(FL_ALT)) {
                     if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        // Move the camera position
                         m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
                                             true);
                     }
                 } else if (Fl::event_button2()) {
-                    // Move the camera position
                     m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
                                         true);
-                } else { // Normal Click for camera movement
+                } else {
                     if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        // Adjust the camera orientation
                         m_viewer->rotate(static_cast<float>(fractionChangeX), static_cast<float>(fractionChangeY));
                     }
                 }
@@ -408,48 +401,51 @@ int MyGlWindow::handle(int e) {
                 redraw();
             }
             return 1;
-        case FL_MOUSEWHEEL: // Handle the scroll event for zoom
-            if (Fl::event_dy() < 0) { // Scroll up
-                m_viewer->zoom(0.1f); // Adjust the zoom increment if needed
-            } else if (Fl::event_dy() > 0) { // Scroll down
-                m_viewer->zoom(-0.1f); // Adjust the zoom decrement if needed
-            }
+        case FL_MOUSEWHEEL:
+            if (Fl::event_dy() < 0)
+                m_viewer->zoom(0.1f);
+            else if (Fl::event_dy() > 0)
+                m_viewer->zoom(-0.1f);
             redraw();
             return 1;
         case FL_KEYBOARD:
             key = Fl::event_key();
-            if (key == FL_Right) {
-                std::cout << "Exiting application." << std::endl;
-                return 1;
-            }
             switch (key) {
-                case 'w': case 'W': case 'z': case 'Z':
+                case 'w':
+                case 'W':
+                case 'z':
+                case 'Z':
                     wasPressed = true;
                     moveForward = true;
                     resetTest();
                     playerCube->setColor(1.0f, 0.0f, 0.0f);
                     break;
-                case 's': case 'S':
+                case 's':
+                case 'S':
                     wasPressed = true;
                     moveBackward = true;
                     playerCube->setColor(0.0f, 1.0f, 0.0f);
                     break;
-                case 'a': case 'A': case 'q': case 'Q':
+                case 'a':
+                case 'A':
+                case 'q':
+                case 'Q':
                     wasPressed = true;
                     moveLeft = true;
                     playerCube->setColor(0.0f, 0.0f, 1.0f);
                     step();
                     break;
-                case 'd': case 'D':
+                case 'd':
+                case 'D':
                     wasPressed = true;
                     moveRight = true;
                     playerCube->setColor(1.0f, 1.0f, 0.0f);
                     break;
-                case FL_Up :
+                case FL_Up:
                     m_viewer->zoom(-0.1f);
                     redraw();
                     return 1;
-                case FL_Down :
+                case FL_Down:
                     m_viewer->zoom(0.1f);
                     redraw();
                     return 1;
@@ -504,25 +500,15 @@ void drawStrokeText(const char *string, int x, int y, int z) {
 
 void MyGlWindow::putText(const char *str, int x, int y, float r, float g, float b) {
     glDisable(GL_LIGHTING);
-
     glMatrixMode(GL_PROJECTION);
-
     glLoadIdentity();
-
     glMatrixMode(GL_MODELVIEW);
-
     glLoadIdentity();
-
     ortho();
-
     glDisable(GL_LIGHTING);
-
     glDisable(GL_DEPTH_TEST);
-
     glColor3f(r, g, b);
-
     drawStrokeText(str, x, y, 0);
-
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
 }
@@ -530,10 +516,8 @@ void MyGlWindow::putText(const char *str, int x, int y, float r, float g, float 
 void MyGlWindow::setProjectileMode() const {
     if (!m_movers.empty()) {
         for (auto mover: m_movers) {
-            // Logic to choose the mode of the projectile
-            // For example, cycle through the projectile types
             int currentType = mover.second->getProjectileType();
-            int nextType = (currentType + 1) % 5; // Assuming 5 projectile types
+            int nextType = (currentType + 1) % Mover::projectileType::NUM_PROJECTILE_TYPES;
             mover.second->setProjectileType(static_cast<enum Mover::projectileType>(nextType));
             (mover.second->*(mover.second->projectileMap[mover.second->getProjectileType()]))();
         }

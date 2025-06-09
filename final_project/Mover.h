@@ -44,7 +44,7 @@
 
 class Mover {
 public:
-    enum projectileType { BASE, WIND, LASER, FIREBALL, ARTILLERY, PISTOL };
+    enum projectileType { BASE, WIND, LASER, FIREBALL, ARTILLERY, PISTOL, NUM_PROJECTILE_TYPES };
     Mover();
     Mover(cyclone::Vector3 pos, cyclone::Vector3 vel, cyclone::Vector3 acc, float mass, float damping);
     explicit Mover(const cyclone::Vector3 &initPosition);
