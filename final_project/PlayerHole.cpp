@@ -1,7 +1,7 @@
-#include "PlayerCube.h"
 #include <GL/glut.h>
+#include "PlayerHole.h"
 
-PlayerCube::PlayerCube() :
+PlayerHole::PlayerHole() :
     swallowRadius(7.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
     cubeSize(2.0f),
     colorR(1.0f), colorG(0.4f), colorB(0.7f) // Initial pink color
@@ -14,20 +14,20 @@ PlayerCube::PlayerCube() :
     body->setInverseInertiaTensor(cyclone::Matrix3(0, 0, 0, 0, 0, 0, 0, 0, 0));
     body->setDamping(0.9, 0.9);
     body->setAcceleration(cyclone::Vector3::GRAVITY * 0);
-    body->setPosition(cyclone::Vector3(0, 2.0f, 0)); // Start at a more reasonable height
+    body->setPosition(cyclone::Vector3(0, 0.1f, 0)); // Start at a more reasonable height
     body->setVelocity(cyclone::Vector3(0, 0, 0));
 }
 
-PlayerCube::~PlayerCube() { delete body; }
+PlayerHole::~PlayerHole() { delete body; }
 
-void PlayerCube::setMovement(bool forward, bool backward, bool left, bool right) {
+void PlayerHole::setMovement(bool forward, bool backward, bool left, bool right) {
     moveForward = forward;
     moveBackward = backward;
     moveLeft = left;
     moveRight = right;
 }
 
-void PlayerCube::update(float duration) {
+void PlayerHole::update(float duration) {
     // Calculate velocity based on movement flags
     cyclone::Vector3 velocity(0, 0, 0);
 
@@ -65,7 +65,7 @@ void PlayerCube::update(float duration) {
     body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
-void PlayerCube::draw() {
+void PlayerHole::draw() {
     // Get the transform matrix from the rigid body
     float transform[16];
     body->getGLTransform(transform);
@@ -94,18 +94,18 @@ void PlayerCube::draw() {
     glPopMatrix();
 }
 
-void PlayerCube::setPosition(const cyclone::Vector3 &pos) {
+void PlayerHole::setPosition(const cyclone::Vector3 &pos) {
     body->setPosition(pos);
     body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
-void PlayerCube::setColor(float r, float g, float b) {
+void PlayerHole::setColor(float r, float g, float b) {
     colorR = r;
     colorG = g;
     colorB = b;
 }
 
-void PlayerCube::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects) {
+void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects) {
     cyclone::Vector3 holePosition = body->getPosition();
 
     for (auto it = objects.begin(); it != objects.end();) {

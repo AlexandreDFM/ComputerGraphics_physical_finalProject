@@ -6,10 +6,10 @@
 #include <FL/Fl.H>
 #include <cyclone.h>
 
-class PlayerCube {
+class PlayerHole {
     public:
-        PlayerCube();
-        ~PlayerCube();
+        PlayerHole();
+        ~PlayerHole();
 
         // Movement control
         void setMovement(bool forward, bool backward, bool left, bool right);
