@@ -408,13 +408,11 @@ int MyGlWindow::handle(int e) {
                 m_viewer->zoom(-0.1f);
             redraw();
             return 1;
-        case FL_KEYBOARD:
+        case FL_KEYDOWN:
             key = Fl::event_key();
             switch (key) {
                 case 'w':
                 case 'W':
-                case 'z':
-                case 'Z':
                     wasPressed = true;
                     moveForward = true;
                     resetTest();
@@ -428,8 +426,6 @@ int MyGlWindow::handle(int e) {
                     break;
                 case 'a':
                 case 'A':
-                case 'q':
-                case 'Q':
                     wasPressed = true;
                     moveLeft = true;
                     playerCube->setColor(0.0f, 0.0f, 1.0f);
@@ -461,6 +457,34 @@ int MyGlWindow::handle(int e) {
                 return 1;
             }
             return 0;
+        case FL_KEYUP:
+            key = Fl::event_key();
+            switch (key) {
+                case 'w':
+                case 'W':
+                    moveForward = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 's':
+                case 'S':
+                    moveBackward = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 'a':
+                case 'A':
+                    moveLeft = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 'd':
+                case 'D':
+                    moveRight = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                default:
+                    break;
+            }
+            redraw();
+            return 1;
         default:
             return Fl_Gl_Window::handle(e);
     }
