@@ -2,7 +2,7 @@
 #include <GL/glut.h>
 
 PlayerCube::PlayerCube() :
-    moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
+    swallowRadius(7.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
     cubeSize(2.0f),
     colorR(1.0f), colorG(0.4f), colorB(0.7f) // Initial pink color
 {
@@ -66,19 +66,30 @@ void PlayerCube::update(float duration) {
 }
 
 void PlayerCube::draw() {
-    GLfloat transform[16];
+    // Get the transform matrix from the rigid body
+    float transform[16];
     body->getGLTransform(transform);
 
+    // Apply the transform to the modelview matrix
     glPushMatrix();
     glMultMatrixf(transform);
 
-    // Draw the cube
-    glColor3f(colorR, colorG, colorB); // Use the stored color
-    glutSolidCube(cubeSize);
+    // Draw a visual representation for the hole
+    glColor4f(colorR, colorG, colorB, 0.8f);
 
-    // Draw a small red sphere at the center to help with orientation
-    glColor3f(1.0f, 0.0f, 0.0f); // Red color
-    glutSolidSphere(0.2f, 10, 10);
+    // Draw a disc on the ground plane
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex3f(0.0f, 0.0f, 0.0f); // Center at ground level
+    int segments = 30;
+    for (int i = 0; i <= segments; ++i) {
+        float angle = 2.0f * static_cast<float>(M_PI) * float(i) / float(segments);
+        glVertex3f(std::cos(angle) * swallowRadius, 0.0f, std::sin(angle) * swallowRadius);
+    }
+    glEnd();
+
+    // Draw a small indicator sphere at the hole's center
+    glColor4f(1.0f, 0.0f, 0.0f, 1.0f); // Red color
+    glutSolidSphere(0.2f, 10, 10); // Small sphere to mark the center
 
     glPopMatrix();
 }
@@ -92,4 +103,44 @@ void PlayerCube::setColor(float r, float g, float b) {
     colorR = r;
     colorG = g;
     colorB = b;
+}
+
+void PlayerCube::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects) {
+    cyclone::Vector3 holePosition = body->getPosition();
+
+    for (auto it = objects.begin(); it != objects.end();) {
+        cyclone::RigidBody *currentBody = *it;
+
+        // Don't check for swallowing with the hole itself
+        if (currentBody == body) {
+            ++it;
+            continue;
+        }
+
+        cyclone::Vector3 objectPosition = currentBody->getPosition();
+        cyclone::Vector3 displacement = objectPosition - holePosition;
+        float distance = displacement.magnitude();
+
+        // Check if object is close to the hole
+        if (distance < swallowRadius) {
+            // If the object is within the swallowing radius, apply a force pulling it towards the hole
+            cyclone::Vector3 pullDirection = displacement.unit();
+            float pullForceMagnitude = (swallowRadius - distance) * 20.0f;
+            cyclone::Vector3 pullForce = pullDirection * pullForceMagnitude;
+            currentBody->addForce(pullForce);
+
+            // Check if the object is very close to be considered swallowed
+            if (distance < swallowRadius * 0.5f) {
+                // Remove the swallowed object
+                delete currentBody;
+                it = objects.erase(it);
+
+                // Increase hole size
+                swallowRadius += 0.5f;
+
+                continue;
+            }
+        }
+        ++it;
+    }
 }
