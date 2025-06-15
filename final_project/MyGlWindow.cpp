@@ -81,7 +81,7 @@ void MyGlWindow::createGameObjects() {
     gameRigidBodies.push_back(floor->getBody());
 
     // Create the player cube
-    playerCube = new PlayerCube();
+    playerCube = new PlayerHole();
     gameRigidBodies.push_back(playerCube->getBody());
 }
 

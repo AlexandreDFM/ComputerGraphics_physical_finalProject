@@ -69,8 +69,8 @@
 
 #include "Floor.h"
 #include "Mover.h"
-#include "PlayerCube.h"
 #include "MoverFactory.h"
+#include "PlayerHole.h"
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -106,7 +106,7 @@ private:
 
     // Rigid bodies for game objects
     std::vector<cyclone::RigidBody *> gameRigidBodies;
-    PlayerCube *playerCube; // The player cube object
+    PlayerHole *playerCube; // The player cube object
     Floor *floor;
 
     // Movement state flags

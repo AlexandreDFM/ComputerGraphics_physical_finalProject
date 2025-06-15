@@ -1,35 +1,33 @@
-#include "Hole.h"
 #include <GL/glut.h>
-#include <iostream>
+#include "PlayerHole.h"
 
-Hole::Hole() :
-    swallowRadius(7.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false) {
-    // Create rigid body for the hole
+PlayerHole::PlayerHole() :
+    swallowRadius(7.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
+    cubeSize(2.0f),
+    colorR(1.0f), colorG(0.4f), colorB(0.7f) // Initial pink color
+{
+    // Create rigid body for the player cube
     body = new cyclone::RigidBody();
 
-    // Set hole properties
-    body->setInverseMass(0); // Infinite mass so it's not affected by forces
+    // Set cube properties
+    body->setInverseMass(0);
     body->setInverseInertiaTensor(cyclone::Matrix3(0, 0, 0, 0, 0, 0, 0, 0, 0));
     body->setDamping(0.9, 0.9);
-    body->setAcceleration(cyclone::Vector3::GRAVITY * 0); // No gravity
-    body->setPosition(cyclone::Vector3(0, 0.1, 0)); // Set initial position at fixed height
-    body->setVelocity(cyclone::Vector3(0, 0, 0)); // Initialize velocity to zero
+    body->setAcceleration(cyclone::Vector3::GRAVITY * 0);
+    body->setPosition(cyclone::Vector3(0, 0.1f, 0)); // Start at a more reasonable height
+    body->setVelocity(cyclone::Vector3(0, 0, 0));
 }
 
-Hole::~Hole() { delete body; }
+PlayerHole::~PlayerHole() { delete body; }
 
-void Hole::setMovement(bool forward, bool backward, bool left, bool right) {
+void PlayerHole::setMovement(bool forward, bool backward, bool left, bool right) {
     moveForward = forward;
     moveBackward = backward;
     moveLeft = left;
     moveRight = right;
 }
 
-void Hole::update(float duration) {
-    // Debug output for movement flags
-    std::cout << "Hole movement flags - Forward: " << moveForward << " Backward: " << moveBackward
-              << " Left: " << moveLeft << " Right: " << moveRight << std::endl;
-
+void PlayerHole::update(float duration) {
     // Calculate velocity based on movement flags
     cyclone::Vector3 velocity(0, 0, 0);
 
@@ -37,56 +35,37 @@ void Hole::update(float duration) {
     if (moveForward && moveLeft) {
         velocity.x = -moveSpeed * 0.7071f; // cos(45 degrees)
         velocity.z = moveSpeed * 0.7071f; // sin(45 degrees)
-        std::cout << "Moving diagonally forward-left" << std::endl;
     } else if (moveForward && moveRight) {
         velocity.x = moveSpeed * 0.7071f;
         velocity.z = moveSpeed * 0.7071f;
-        std::cout << "Moving diagonally forward-right" << std::endl;
     } else if (moveBackward && moveLeft) {
         velocity.x = -moveSpeed * 0.7071f;
         velocity.z = -moveSpeed * 0.7071f;
-        std::cout << "Moving diagonally backward-left" << std::endl;
     } else if (moveBackward && moveRight) {
         velocity.x = moveSpeed * 0.7071f;
         velocity.z = -moveSpeed * 0.7071f;
-        std::cout << "Moving diagonally backward-right" << std::endl;
     } else {
-        if (moveForward) {
+        if (moveForward)
             velocity.z = moveSpeed;
-            std::cout << "Moving forward" << std::endl;
-        }
-        if (moveBackward) {
+        if (moveBackward)
             velocity.z = -moveSpeed;
-            std::cout << "Moving backward" << std::endl;
-        }
-        if (moveLeft) {
+        if (moveLeft)
             velocity.x = -moveSpeed;
-            std::cout << "Moving left" << std::endl;
-        }
-        if (moveRight) {
+        if (moveRight)
             velocity.x = moveSpeed;
-            std::cout << "Moving right" << std::endl;
-        }
     }
-
-    // Debug output for calculated velocity
-    std::cout << "Calculated velocity - X: " << velocity.x << " Y: " << velocity.y << " Z: " << velocity.z << std::endl;
 
     // Update position
     cyclone::Vector3 currentPos = body->getPosition();
     cyclone::Vector3 newPos = currentPos + velocity * duration;
-    newPos.y = 0.1; // Keep fixed height
-
-    // Debug output for position update
-    std::cout << "Position update - Current: (" << currentPos.x << ", " << currentPos.y << ", " << currentPos.z
-              << ") New: (" << newPos.x << ", " << newPos.y << ", " << newPos.z << ")" << std::endl;
 
     // Update position and velocity
     body->setPosition(newPos);
     body->setVelocity(velocity);
+    body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
-void Hole::draw() {
+void PlayerHole::draw() {
     // Get the transform matrix from the rigid body
     float transform[16];
     body->getGLTransform(transform);
@@ -96,7 +75,7 @@ void Hole::draw() {
     glMultMatrixf(transform);
 
     // Draw a visual representation for the hole
-    glColor4f(0.0f, 0.0f, 0.0f, 0.8f); // More opaque black for better visibility
+    glColor4f(colorR, colorG, colorB, 0.8f);
 
     // Draw a disc on the ground plane
     glBegin(GL_TRIANGLE_FAN);
@@ -115,13 +94,18 @@ void Hole::draw() {
     glPopMatrix();
 }
 
-void Hole::setPosition(const cyclone::Vector3 &pos) {
-    cyclone::Vector3 newPos = pos;
-    newPos.y = 0.1; // Keep fixed height
-    body->setPosition(newPos);
+void PlayerHole::setPosition(const cyclone::Vector3 &pos) {
+    body->setPosition(pos);
+    body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
-void Hole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects) {
+void PlayerHole::setColor(float r, float g, float b) {
+    colorR = r;
+    colorG = g;
+    colorB = b;
+}
+
+void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects) {
     cyclone::Vector3 holePosition = body->getPosition();
 
     for (auto it = objects.begin(); it != objects.end();) {
