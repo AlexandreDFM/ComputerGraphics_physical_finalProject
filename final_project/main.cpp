@@ -35,17 +35,17 @@ Fl_Group *widgets;
 Fl_Light_Button *run_btn;
 
 void changeFrameCB(Fl_Widget *w, void *data) {
-    Fl_Choice *widget = (Fl_Choice *) w;
+    const Fl_Choice *widget = static_cast<Fl_Choice *>(w);
     int i = widget->value();
     const char *menu = widget->text(i);
     frameRate = atoi(menu);
 
-    MyGlWindow *win = (MyGlWindow *) data;
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
     win->redraw();
 }
 
 void idleCB(void *w) {
-    MyGlWindow *win = (MyGlWindow *) w;
+    MyGlWindow *win = static_cast<MyGlWindow *>(w);
     if (clock() - lastRedraw > CLOCKS_PER_SEC / frameRate) {
         lastRedraw = clock();
         win->update();
@@ -54,8 +54,8 @@ void idleCB(void *w) {
 }
 
 void but_cb(Fl_Widget *o, void *data) {
-    Fl_Button *b = (Fl_Button *) o;
-    MyGlWindow *win = (MyGlWindow *) data;
+    const Fl_Button *b = static_cast<Fl_Button *>(o);
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
     if (b->value())
         win->run = 1;
     else
@@ -64,19 +64,19 @@ void but_cb(Fl_Widget *o, void *data) {
 }
 
 void resetTest(Fl_Widget *o, void *data) {
-    MyGlWindow *win = (MyGlWindow *) data;
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
     win->resetTest();
     win->damage(1);
 }
 
 void objectMode(Fl_Widget *o, void *data) {
-    MyGlWindow *win = (MyGlWindow *) data;
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
     win->setProjectileMode();
     win->damage(1);
 }
 
 void step(Fl_Widget *o, void *data) {
-    MyGlWindow *win = (MyGlWindow *) data;
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
     run_btn->value(0); // turn off the run button first
     win->run = 0; // disable the run variable
     win->step(); // call step()
@@ -85,8 +85,8 @@ void step(Fl_Widget *o, void *data) {
 int main() {
     // plastic
     Fl::scheme("plastic");
-    int width = 1600;
-    int height = 900;
+    constexpr int width = 1600;
+    constexpr int height = 900;
     Fl_Double_Window *wind = new Fl_Double_Window(100, 100, width, height, "GL 3D FrameWork");
 
     // put widgets inside of the window
@@ -101,27 +101,32 @@ int main() {
     widgets->end();
     Fl_Group::current()->resizable(widgets);
 
-    Fl_Choice *choice;
-    choice = new Fl_Choice(100, height - 40, 50, 20, "FrameRate");
+    Fl_Choice *choice = new Fl_Choice(100, height - 40, 50, 20, "FrameRate");
     choice->add("15");
     choice->add("30");
     choice->add("60");
     choice->add("120");
+    choice->add("144");
+    choice->add("165");
     choice->add("240");
     choice->value(2);
     choice->callback((Fl_Callback *) changeFrameCB, gl);
 
-    run_btn = new Fl_Light_Button(width - 600, height - 40, 100, 20, "Run");
+    constexpr int buttonWidth = 100;
+    constexpr int buttonHeight = 20;
+    constexpr int windowWidthCenter = width / 2 - buttonWidth / 2;
+
+    run_btn = new Fl_Light_Button(windowWidthCenter , height - 40, buttonWidth, buttonHeight, "Run");
     run_btn->callback(but_cb, gl);
     gl->ui = run_btn;
 
-    Fl_Button *resetTestButton = new Fl_Button(width - 400, height - 40, 100, 20, "Reset_Test");
+    Fl_Button *resetTestButton = new Fl_Button(windowWidthCenter + 100, height - 40, buttonWidth, buttonHeight, "Reset_Test");
     resetTestButton->callback(resetTest, gl);
 
-    Fl_Button *objectModeButton = new Fl_Button(width - 200, height - 40, 100, 20, "Object_Mode");
+    Fl_Button *objectModeButton = new Fl_Button(windowWidthCenter + 200, height - 40, buttonWidth, buttonHeight, "Object_Mode");
     objectModeButton->callback(objectMode, gl);
 
-    Fl_Button *stepButton = new Fl_Button(width - 100, height - 40, 100, 20, "Step");
+    Fl_Button *stepButton = new Fl_Button(windowWidthCenter + 300, height - 40, buttonWidth, buttonHeight, "Step");
     stepButton->callback(step, gl);
 
     wind->end();
