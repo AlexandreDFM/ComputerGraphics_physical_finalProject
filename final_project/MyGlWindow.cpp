@@ -281,16 +281,22 @@ void MyGlWindow::setProjection(int clearProjection)
         glLoadIdentity();
     // compute the aspect ratio so we don't distort things
     const double aspect = static_cast<double>(w()) / static_cast<double>(h());
-    gluPerspective(fieldOfView, aspect, 1, 1000);
+    double orthoSize = 25;
+    glOrtho(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, -1000, 1000);
 
     // put the camera where we want it to be
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    // use the transformation in the ArcBall
+    
+    double distance = 50;
+    double camX = playerCube->getPosition().x + distance + m_viewer->getViewPoint().x;
+    double camY = playerCube->getPosition().y + distance * 0.5 + m_viewer->getViewPoint().y;
+    double camZ = playerCube->getPosition().z + distance + m_viewer->getViewPoint().z;
 
-    gluLookAt(m_viewer->getViewPoint().x, m_viewer->getViewPoint().y, m_viewer->getViewPoint().z,
-              m_viewer->getViewCenter().x, m_viewer->getViewCenter().y, m_viewer->getViewCenter().z,
+    gluLookAt(camX, camY, camZ,
+              playerCube->getPosition().x, playerCube->getPosition().y, playerCube->getPosition().z,
               m_viewer->getUpVector().x, m_viewer->getUpVector().y, m_viewer->getUpVector().z);
+
 
     //	glDisable(GL_BLEND);
 }
