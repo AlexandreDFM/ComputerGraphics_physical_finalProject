@@ -97,13 +97,6 @@ void MyGlWindow::createGameObjects() {
     simplePhysics->update(0.3f);
 
     // Integrate model into the physics system
-    // LoadModel("../Models/apartment.obj"); // Load the model for the building
-    
-
-    // Choose random between each file
-    //std::random_device rd;
-    //std::mt19937 gen(rd());
-    //std::uniform_real_distribution<unsigned int> modelPathRand(1, 2);
     AddModelToRigidBodies(*simplePhysics);
 }
 
@@ -323,7 +316,7 @@ void MyGlWindow::draw() {
     }
 
     glViewport(0, 0, w(), h());
-   
+
     // clear the window, be sure to clear the Z-Buffer too
     glClearColor(0.2f, 0.2f, .2f, 0); // background should be blue
     glClearStencil(0);
@@ -370,23 +363,68 @@ void MyGlWindow::draw() {
 
     simplePhysics->render(0, textureID);
 
+    // Draw timer above the score
+    char timerStr[64];
+    int timerY = 35; // Y position above the score
+    snprintf(timerStr, sizeof(timerStr), "Time: %.2f s", timerSeconds);
+    putText(timerStr, 10, timerY, 1, 1, 0.5f);
+
     putText("Score :", 10, 10, 0.5, 0.5, 1);
     putText(score->getScoreString().c_str(), 125, 10, 0.5, 0.5, 1);
+
+    if (!run) {
+        // print a white background
+        glColor4f(0.2f, 0.2f, 0.2f, 0.5f);
+        glBegin(GL_QUADS);
+        glVertex2f(0, 0);
+        glVertex2f(w(), 0);
+        glVertex2f(w(), h());
+        glVertex2f(0, h());
+        glEnd();
+        glColor3f(1, 1, 1);
+        // print the message in the middle of the screen
+        putText("Game is not running press on the run button", w() / 2 - 300, h() / 2 - 20, 1, 1, 1);
+        putText("Press 'R' to reset the game", w() / 2 - 175, h() / 2 + 20, 1, 1, 1);
+    }
 }
 
-void MyGlWindow::resetTest() {
-    if (!m_movers.empty()) {
-        for (auto mover: m_movers) {
-            mover.second->reset();
-            (mover.second->*(mover.second->projectileMap[mover.second->getProjectileType()]))();
-        }
-    }
+void MyGlWindow::reset() {
+    run = 0;
+    ui->value(0);
+
+    // Reset timer
+    resetTimer();
+
+    // Reset score
+    if (score) score->setScore(0);
+
+    // Reset playerCube and physics state
+    if (playerCube) playerCube->setPosition(cyclone::Vector3(0, 2, 0));
+    if (simplePhysics) simplePhysics->reset();
+
+    // Optionally, reset movement flags
+    moveForward = moveBackward = moveLeft = moveRight = false;
+
+    // Redraw window
+    redraw();
 }
 
 void MyGlWindow::update() {
     TimingData::update();
 
     const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
+
+    if (duration <= 0.0f)
+        return;
+
+    if (!run) {
+        // If not running, just update the player cube
+        playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
+        playerCube->update(duration);
+        return;
+    }
+
+    timerSeconds += duration;
 
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);
@@ -396,33 +434,30 @@ void MyGlWindow::update() {
 
     simplePhysics->update(duration);
 
-    if (duration <= 0.0f)
-        return;
-
-    playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
-    playerCube->update(duration);
-
-    // Handle physics simulation for other objects if running
-    if (run) {
-        // Check for collisions with floor
-        for (auto body: gameRigidBodies) {
-            if (body != playerCube->getBody() && body != floor->getBody()) {
-                cyclone::Vector3 pos = body->getPosition();
-                float size = 2.0f; // Assuming objects are cubes of size 2
-
-                // If object is below floor level, bounce it back up
-                if (pos.y < 5.0f) {
-                    cyclone::Vector3 velocity = body->getVelocity();
-                    velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
-                    body->setVelocity(velocity);
-                    pos.y = 4.0f; // Set position to floor level
-                    body->setPosition(pos);
-                }
-
-                body->integrate(duration);
-            }
-        }
-    }
+    // playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
+    // playerCube->update(duration);
+    //
+    // // Handle physics simulation for other objects if running
+    // if (run) {
+    //     // Check for collisions with floor
+    //     for (auto body: gameRigidBodies) {
+    //         if (body != playerCube->getBody() && body != floor->getBody()) {
+    //             cyclone::Vector3 pos = body->getPosition();
+    //             float size = 2.0f; // Assuming objects are cubes of size 2
+    //
+    //             // If object is below floor level, bounce it back up
+    //             if (pos.y < 5.0f) {
+    //                 cyclone::Vector3 velocity = body->getVelocity();
+    //                 velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
+    //                 body->setVelocity(velocity);
+    //                 pos.y = 4.0f; // Set position to floor level
+    //                 body->setPosition(pos);
+    //             }
+    //
+    //             body->integrate(duration);
+    //         }
+    //     }
+    // }
 
     // Force redraw to update visual position
     redraw();
@@ -489,7 +524,7 @@ void MyGlWindow::setProjection(int clearProjection)
     // put the camera where we want it to be
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
+
     double distance = 50;
     double camX = playerCube->getPosition().x + distance + m_viewer->getViewPoint().x;
     double camY = playerCube->getPosition().y + distance * 0.5 + m_viewer->getViewPoint().y;
@@ -623,7 +658,6 @@ int MyGlWindow::handle(int e) {
                 case 'W':
                     wasPressed = true;
                     moveForward = true;
-                    resetTest();
                     playerCube->setColor(1.0f, 0.0f, 0.0f);
                     playerCube->setColor(1.0f, 0.0f, 0.0f);
                     break;
@@ -638,7 +672,6 @@ int MyGlWindow::handle(int e) {
                     wasPressed = true;
                     moveLeft = true;
                     playerCube->setColor(0.0f, 0.0f, 1.0f);
-                    step();
                     break;
                 case 'd':
                 case 'D':
@@ -646,6 +679,9 @@ int MyGlWindow::handle(int e) {
                     moveRight = true;
                     playerCube->setColor(1.0f, 1.0f, 0.0f);
                     break;
+                case 'r':
+                    reset();
+                    return 1;
                 case FL_Up:
                     m_viewer->zoom(-0.1f);
                     redraw();
@@ -746,26 +782,12 @@ void MyGlWindow::putText(const char *str, int x, int y, float r, float g, float 
     glEnable(GL_LIGHTING);
 }
 
-void MyGlWindow::setProjectileMode() const {
-    if (!m_movers.empty()) {
-        for (auto mover: m_movers) {
-            int currentType = mover.second->getProjectileType();
-            int nextType = (currentType + 1) % Mover::projectileType::NUM_PROJECTILE_TYPES;
-            mover.second->setProjectileType(static_cast<enum Mover::projectileType>(nextType));
-            (mover.second->*(mover.second->projectileMap[mover.second->getProjectileType()]))();
-        }
-    }
+// Timer control methods
+void MyGlWindow::startTimer() {
+    timerRunning = true;
 }
 
-const char *MyGlWindow::getProjectileMode() const {
-    if (!m_movers.empty()) {
-        return Mover::getProjectileModeType().at(m_movers.begin()->second->getProjectileType());
-    }
-    return nullptr;
-}
-
-void MyGlWindow::step() {
-    TimingData::update();
-
-    float duration = 0.03f;
+void MyGlWindow::resetTimer() {
+    timerSeconds = 0.0f;
+    timerRunning = false;
 }

@@ -89,16 +89,17 @@ public:
     int run;
     void update();
     void doPick();
-    void resetTest();
+    void reset();
     int selected;
     void putText(const char *str, int x, int y, float r, float g, float b);
-    void setProjectileMode() const;
-
-    const char *getProjectileMode() const;
-    void step();
-
     void createGameObjects();
     void AddModelToRigidBodies(SimplePhysics &physics);
+
+    // Timer controls
+    void startTimer();
+    void resetTimer();
+    float getTimerSeconds() const { return timerSeconds; }
+    bool isTimerRunning() const { return timerRunning; }
 
 private:
     void draw() override;
@@ -111,8 +112,6 @@ private:
     float fieldOfView;
     std::map<int, Mover *> m_movers;
     std::vector<Mover *> m_moverConnection;
-
-    cyclone::World *physicsWorld;
 
     Score *score;
 
@@ -138,6 +137,10 @@ private:
     bool moveRight = false;
 
     bool textureLoaded = false;
+
+    // Timer state
+    float timerSeconds = 0.0f;
+    bool timerRunning = false;
 
     void setProjection(int clearProjection = 1);
     void getMouseNDC(float &x, float &y);

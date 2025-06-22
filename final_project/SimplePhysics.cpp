@@ -9,7 +9,6 @@ void SimplePhysics::reset() {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> sizeDist(1.0f, 2.0f);
     std::uniform_real_distribution<float> posDist(-100.0f, 100.0f);
-    // std::uniform_real_distribution<float> heightDist(1.0f, 5.0f);
 
     for (auto box: boxData) {
         const float scale = sizeDist(gen);
@@ -18,8 +17,7 @@ void SimplePhysics::reset() {
         cyclone::Vector3 position(posDist(gen), 50.f, posDist(gen));
         cyclone::Quaternion orientation;
 
-        box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0) // No initial velocity
-        );
+        box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0));
     }
 }
 
@@ -77,7 +75,6 @@ void SimplePhysics::update(cyclone::real duration) {
 void SimplePhysics::render(int shadow, const GLuint textureID) {
     for (int i = 0; i < boxData.size(); i++) {
         if (boxData[i]->isValid()) {
-            //boxData[i]->drawHitbox(i + 1, shadow); // Use 1-based indices for picking
             boxData[i]->draw(i + 1, shadow, textureID);
         }
     }
