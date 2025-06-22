@@ -97,13 +97,13 @@ public:
     void step();
 
     void createGameObjects();
-    void AddModelToRigidBodies(const std::string &filename, SimplePhysics &physics);
+    void AddModelToRigidBodies(SimplePhysics &physics);
 
 private:
     void draw() override;
     int handle(int e) override;
     void drawModel(const Mesh &modelMesh);
-    void LoadModel(std::string filename);
+    void LoadModel(std::string filename, Mesh &newMesh);
     void LoadTexture(std::string filename, GLuint &newTextureID);
 
     Viewer *m_viewer;
@@ -124,7 +124,8 @@ private:
     GLuint floorTextureID;
     GLuint outFloorTextureID;
     GLuint holeTextureID;
-    Mesh mesh; // Mesh for the player cube
+    Mesh aptMesh; // Mesh for the player cube
+    Mesh treeMesh; // Mesh for the tree
     PlayerHole *playerCube;
     SimplePhysics *simplePhysics;
     std::vector<cyclone::RigidBody *> gameRigidBodies;

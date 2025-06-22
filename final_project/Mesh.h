@@ -1,6 +1,7 @@
 #ifndef MESH_H
 #define MESH_H
 
+#include "core.h"
 #include <vector>
 #include <iostream>
 
@@ -43,6 +44,11 @@ public:
         textureCoords.push_back(v);
     }
 
+    void SetBoundingBox(const cyclone::Vector3 &min, const cyclone::Vector3 &max) {
+        bboxMin = min;
+        bboxMax = max;
+    }
+
     // Utility function to clear all data
     void clear() {
         vertices.clear();
@@ -83,6 +89,8 @@ public:
         glDisable(GL_LIGHTING); // Disable lighting after drawing the model
     }
 
+    cyclone::Vector3 bboxMin;
+    cyclone::Vector3 bboxMax; // Bounding box for the mesh
 private:
     std::vector<float> vertices; // Stores vertex positions
     std::vector<float> normals; // Stores normal vectors

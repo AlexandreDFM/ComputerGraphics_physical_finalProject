@@ -47,14 +47,14 @@ void SimplePhysics::generateContacts() {
             cyclone::CollisionDetector::boxAndHalfSpace(*box, plane, cData);
         }
 
-        // Check for collisions with each other box
-        // for (auto other: boxData) {
-        //     if (!other->isValid())
-        //         continue;
-        //     if (!cData->hasMoreContacts())
-        //         return;
-        //     cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
-        // }
+         //Check for collisions with each other box
+         /*for (auto other: boxData) {
+             if (!other->isValid())
+                 continue;
+             if (!cData->hasMoreContacts())
+                 return;
+             cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
+         }*/
     }
 }
 
@@ -77,7 +77,7 @@ void SimplePhysics::update(cyclone::real duration) {
 void SimplePhysics::render(int shadow, const GLuint textureID) {
     for (int i = 0; i < boxData.size(); i++) {
         if (boxData[i]->isValid()) {
-            boxData[i]->drawHitbox(i + 1, shadow); // Use 1-based indices for picking
+            //boxData[i]->drawHitbox(i + 1, shadow); // Use 1-based indices for picking
             boxData[i]->draw(i + 1, shadow, textureID);
         }
     }

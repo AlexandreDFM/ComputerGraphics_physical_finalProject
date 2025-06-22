@@ -151,10 +151,18 @@ public:
             glColor3f(1.0f, 0.7f, 0.7f);
         }
 
+        float modelExtentX = mesh.bboxMax.x - mesh.bboxMin.x;
+        float modelExtentY = mesh.bboxMax.y - mesh.bboxMin.y;
+        float modelExtentZ = mesh.bboxMax.z - mesh.bboxMin.z;
+
+        float scaleX = (halfSize.x * 2) / modelExtentX;
+        float scaleY = (halfSize.y * 2) / modelExtentY;
+        float scaleZ = (halfSize.z * 2) / modelExtentZ;
+
         glLoadName(name);
         glPushMatrix();
         glMultMatrixf(mat);
-        glScalef(static_cast<GLfloat>(0.2f * (halfSize.x)) * 2, static_cast<GLfloat>(0.1f * (halfSize.y)) * 2, static_cast<GLfloat>(0.2f * (halfSize.z)) * 2);
+        glScalef(static_cast<GLfloat>(scaleX), static_cast<GLfloat>(scaleY), static_cast<GLfloat>(scaleZ));
         mesh.drawModel(mesh, textureID);
         glPopMatrix();
     }
@@ -177,7 +185,7 @@ private:
 
 class SimplePhysics {
 public:
-    static const unsigned maxContacts = 512;
+    static const unsigned maxContacts = 2048;
     std::vector<Box*> boxData;
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;
@@ -189,7 +197,7 @@ public:
         cData->contactArray = contacts;
         resolver = new cyclone::ContactResolver(maxContacts * 2, maxContacts * 2, 0.001f, 0.001f);
         // Initialize vector with new Box objects
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 500; i++) {
             boxData.push_back(new Box());
         }
         reset();

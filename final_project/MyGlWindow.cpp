@@ -98,24 +98,35 @@ void MyGlWindow::createGameObjects() {
 
     // Integrate model into the physics system
     // LoadModel("../Models/apartment.obj"); // Load the model for the building
-    const std::string modelPath = "../../../Models/apartment.obj";
-    AddModelToRigidBodies(modelPath, *simplePhysics);
+    
+
+    // Choose random between each file
+    //std::random_device rd;
+    //std::mt19937 gen(rd());
+    //std::uniform_real_distribution<unsigned int> modelPathRand(1, 2);
+    AddModelToRigidBodies(*simplePhysics);
 }
 
-void MyGlWindow::AddModelToRigidBodies(const std::string& filename, SimplePhysics& physics) {
+void MyGlWindow::AddModelToRigidBodies(SimplePhysics& physics) {
+
+    const std::string apartmentPath = "../../../Models/apartment.obj";
+    const std::string treePath = "../../../Models/tree3.obj";
+    srand(static_cast<unsigned int>(std::time(nullptr))); // Seed the random number generator
+
     // Load the model
-    LoadModel(filename);
+    LoadModel(apartmentPath, aptMesh);
+    LoadModel(treePath, treeMesh);
 
     // Iterate through all rigid bodies in the physics system
     for (auto& box : physics.getBoxes()) {
         // Set the mesh for the rigid body
-        box->setMesh(mesh);
+        box->setMesh((rand() % 2 == 0) ? aptMesh : treeMesh);
     }
 
     std::cout << "Model added to all rigid bodies in the physics system." << std::endl;
 }
 
-void MyGlWindow::LoadModel(std::string filename) {
+void MyGlWindow::LoadModel(std::string filename, Mesh &newMesh) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -136,6 +147,13 @@ void MyGlWindow::LoadModel(std::string filename) {
     float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
     float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
 
+    float extentX = maxX - minX;
+    float extentY = maxY - minY;
+    float extentZ = maxZ - minZ;
+    float maxExtent = std::max({extentX, extentY, extentZ});
+    float targetSize = 1.0f; // You can change this to any size you want
+    float scale = targetSize / maxExtent;
+
     for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
         float x = attrib.vertices[i + 0];
         float y = attrib.vertices[i + 1];
@@ -149,13 +167,15 @@ void MyGlWindow::LoadModel(std::string filename) {
         maxZ = std::max(maxZ, z);
     }
 
+    newMesh.SetBoundingBox(cyclone::Vector3(minX, minY, minZ), cyclone::Vector3(maxX, maxY, maxZ));
+
     // Center of the bounding box
     float centerX = (minX + maxX) * 0.5f;
     float centerY = (minY + maxY) * 0.5f;
     float centerZ = (minZ + maxZ) * 0.5f;
 
     // Clear any previous data
-    mesh.clear();
+    newMesh.clear();
 
     for (const auto &shape: shapes) {
         for (const auto &index: shape.mesh.indices) {
@@ -163,21 +183,21 @@ void MyGlWindow::LoadModel(std::string filename) {
             float x = attrib.vertices[3 * index.vertex_index + 0] - centerX;
             float y = attrib.vertices[3 * index.vertex_index + 1] - centerY;
             float z = attrib.vertices[3 * index.vertex_index + 2] - centerZ;
-            mesh.addVertex(x, y, z);
+            newMesh.addVertex(x, y, z);
 
             // Normal
             if (!attrib.normals.empty() && index.normal_index >= 0) {
-                mesh.addNormal(attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
+                newMesh.addNormal(attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
                                attrib.normals[3 * index.normal_index + 2]);
             }
 
             // Texture coordinate
             if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
-                mesh.addTextureCoord(attrib.texcoords[2 * index.texcoord_index + 0],
-                                     attrib.texcoords[2 * index.texcoord_index + 1]);
+                newMesh.addTextureCoord(attrib.texcoords[2 * index.texcoord_index + 0],
+                                     1.0f - attrib.texcoords[2 * index.texcoord_index + 1]);
             }
 
-            mesh.addIndex(static_cast<unsigned int>(mesh.getIndices().size()));
+            newMesh.addIndex(static_cast<unsigned int>(newMesh.getIndices().size()));
         }
     }
 }
