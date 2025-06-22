@@ -7,13 +7,15 @@ void SimplePhysics::reset() {
     // Random number generator for box sizes and positions
     std::random_device rd;
     std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> sizeDist(0.5f, 2.0f);
+    std::uniform_real_distribution<float> sizeDist(1.0f, 2.0f);
     std::uniform_real_distribution<float> posDist(-100.0f, 100.0f);
-    std::uniform_real_distribution<float> heightDist(1.0f, 5.0f);
+    // std::uniform_real_distribution<float> heightDist(1.0f, 5.0f);
 
     for (auto box: boxData) {
-        cyclone::Vector3 extents(sizeDist(gen), sizeDist(gen), sizeDist(gen));
-        cyclone::Vector3 position(posDist(gen), heightDist(gen), posDist(gen));
+        const float scale = sizeDist(gen);
+        cyclone::Vector3 extents(1.0f, 2.0f, 1.0f);
+        extents *= scale;
+        cyclone::Vector3 position(posDist(gen), 50.f, posDist(gen));
         cyclone::Quaternion orientation;
 
         box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0) // No initial velocity
@@ -72,10 +74,11 @@ void SimplePhysics::update(cyclone::real duration) {
     }
 }
 
-void SimplePhysics::render(int shadow) {
-    for (auto box: boxData) {
-        if (box->isValid()) {
-            box->draw(shadow);
+void SimplePhysics::render(int shadow, const GLuint textureID) {
+    for (int i = 0; i < boxData.size(); i++) {
+        if (boxData[i]->isValid()) {
+            boxData[i]->drawHitbox(i + 1, shadow); // Use 1-based indices for picking
+            boxData[i]->draw(i + 1, shadow, textureID);
         }
     }
 }

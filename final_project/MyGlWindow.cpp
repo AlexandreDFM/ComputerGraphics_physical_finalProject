@@ -58,9 +58,6 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
     run = 0;
     selected = -1;
 
-    // Initialize the physics world
-    physicsWorld = new cyclone::World(20); // Allow up to 20 contacts
-
     // Create game objects
     createGameObjects();
 
@@ -68,9 +65,6 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
 }
 
 MyGlWindow::~MyGlWindow() {
-    // Clean up the physics world
-    delete physicsWorld;
-
     // Clean up rigid bodies
     for (auto body: gameRigidBodies) {
         if (body != playerCube->getBody() && body != floor->getBody()) {
@@ -82,9 +76,14 @@ MyGlWindow::~MyGlWindow() {
 }
 
 void MyGlWindow::createGameObjects() {
+    // Create score object
+    score = new Score(0);
+
     // Create the floor
     floor = new Floor();
     gameRigidBodies.push_back(floor->getBody());
+
+    outFloor = new Floor(350, -0.1f);
 
     // Create the player cube
     playerCube = new PlayerHole();
@@ -94,19 +93,33 @@ void MyGlWindow::createGameObjects() {
     simplePhysics = new SimplePhysics();
 
     playerCube->setSimplePhysics(simplePhysics);
+    playerCube->setScore(score);
     simplePhysics->update(0.3f);
 
-    // Create other game objects using the factory
-    building = MoverFactory::getInstance().createMover(cyclone::Vector3(0, 2, 0));
-    LoadModel("../../../Models/apartment.obj"); // Load the model for the building
+    // Integrate model into the physics system
+    // LoadModel("../Models/apartment.obj"); // Load the model for the building
+    const std::string modelPath = "../../../Models/apartment.obj";
+    AddModelToRigidBodies(modelPath, *simplePhysics);
+}
+
+void MyGlWindow::AddModelToRigidBodies(const std::string& filename, SimplePhysics& physics) {
+    // Load the model
+    LoadModel(filename);
+
+    // Iterate through all rigid bodies in the physics system
+    for (auto& box : physics.getBoxes()) {
+        // Set the mesh for the rigid body
+        box->setMesh(mesh);
+    }
+
+    std::cout << "Model added to all rigid bodies in the physics system." << std::endl;
 }
 
 void MyGlWindow::LoadModel(std::string filename) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-    std::string err;
-    std::string warn;
+    std::string err, warn;
 
     bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), nullptr, true);
 
@@ -119,48 +132,60 @@ void MyGlWindow::LoadModel(std::string filename) {
         return;
     }
 
+    // Compute bounding box
+    float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
+    float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
+
+    for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
+        float x = attrib.vertices[i + 0];
+        float y = attrib.vertices[i + 1];
+        float z = attrib.vertices[i + 2];
+
+        minX = std::min(minX, x);
+        maxX = std::max(maxX, x);
+        minY = std::min(minY, y);
+        maxY = std::max(maxY, y);
+        minZ = std::min(minZ, z);
+        maxZ = std::max(maxZ, z);
+    }
+
+    // Center of the bounding box
+    float centerX = (minX + maxX) * 0.5f;
+    float centerY = (minY + maxY) * 0.5f;
+    float centerZ = (minZ + maxZ) * 0.5f;
+
     // Clear any previous data
-    mesh.vertices.clear();
-    mesh.normals.clear();
-    mesh.texCoords.clear();
-    mesh.indices.clear();
+    mesh.clear();
 
     for (const auto &shape: shapes) {
         for (const auto &index: shape.mesh.indices) {
             // Vertex
-            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 0]);
-            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);
-            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);
+            float x = attrib.vertices[3 * index.vertex_index + 0] - centerX;
+            float y = attrib.vertices[3 * index.vertex_index + 1] - centerY;
+            float z = attrib.vertices[3 * index.vertex_index + 2] - centerZ;
+            mesh.addVertex(x, y, z);
 
             // Normal
             if (!attrib.normals.empty() && index.normal_index >= 0) {
-                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 0]);
-                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 1]);
-                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 2]);
+                mesh.addNormal(attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
+                               attrib.normals[3 * index.normal_index + 2]);
             }
 
-            // Texture coordinate (UV)
+            // Texture coordinate
             if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
-                mesh.texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 0]);
-                mesh.texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 1]);
-            } else {
-                // fallback UVs (optional, can remove this else if not desired)
-                mesh.texCoords.push_back(0.0f);
-                mesh.texCoords.push_back(0.0f);
+                mesh.addTextureCoord(attrib.texcoords[2 * index.texcoord_index + 0],
+                                     attrib.texcoords[2 * index.texcoord_index + 1]);
             }
 
-            mesh.indices.push_back(static_cast<unsigned int>(mesh.indices.size()));
+            mesh.addIndex(static_cast<unsigned int>(mesh.getIndices().size()));
         }
     }
-
-    std::cout << "Model loaded with " << mesh.vertices.size() / 3 << " vertices and " << mesh.texCoords.size() / 2
-              << " UVs." << std::endl;
 }
 
 
-void MyGlWindow::LoadTexture(std::string filename) {
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_2D, textureID);
+void MyGlWindow::LoadTexture(std::string filename, GLuint &newTextureID) {
+    glGenTextures(1, &newTextureID);
+    glBindTexture(GL_TEXTURE_2D, newTextureID);
     // Load the image data (you can use a library like SOIL or stb_image.h)
     int width, height, channels;
     unsigned char *data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
@@ -225,31 +250,31 @@ void setupObjects() {
     glStencilMask(0x1); // only deal with the 1st bit
 }
 
-void MyGlWindow::drawModel(const ModelMesh &modelMesh) {
+void MyGlWindow::drawModel(const Mesh &modelMesh) {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
     glColor3f(1.0f, 1.0f, 1.0f); // Set color to white for texture mapping
     glBindTexture(GL_TEXTURE_2D, textureID); // <-- bind your texture
 
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 0, modelMesh.vertices.data());
+    glVertexPointer(3, GL_FLOAT, 0, modelMesh.getVertices().data());
 
-    if (!modelMesh.normals.empty()) {
+    if (!modelMesh.getNormals().empty()) {
         glEnableClientState(GL_NORMAL_ARRAY);
-        glNormalPointer(GL_FLOAT, 0, modelMesh.normals.data());
+        glNormalPointer(GL_FLOAT, 0, modelMesh.getNormals().data());
     }
 
-    if (!modelMesh.texCoords.empty()) {
+    if (!modelMesh.getTextureCoords().empty()) {
         glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glTexCoordPointer(2, GL_FLOAT, 0, modelMesh.texCoords.data()); // <-- setup UVs
+        glTexCoordPointer(2, GL_FLOAT, 0, modelMesh.getTextureCoords().data()); // <-- setup UVs
     }
 
-    glDrawElements(GL_TRIANGLES, modelMesh.indices.size(), GL_UNSIGNED_INT, modelMesh.indices.data());
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(modelMesh.getIndices().size()), GL_UNSIGNED_INT, modelMesh.getIndices().data());
 
     glDisableClientState(GL_VERTEX_ARRAY);
-    if (!modelMesh.normals.empty())
+    if (!modelMesh.getNormals().empty())
         glDisableClientState(GL_NORMAL_ARRAY);
-    if (!modelMesh.texCoords.empty())
+    if (!modelMesh.getTextureCoords().empty())
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
 
@@ -267,13 +292,15 @@ void MyGlWindow::draw() {
     }
 
     if (!textureLoaded) {
-        LoadTexture("../../../Models/apartment_texture.png");
+        LoadTexture("../../../Models/apartment_texture.png", textureID);
+        LoadTexture("../../../Models/Grass.png", floorTextureID);
+        LoadTexture("../../../Models/Concrete.png", outFloorTextureID);
+        LoadTexture("../../../Models/holeTex.png", holeTextureID);
         textureLoaded = true;
     }
 
     glViewport(0, 0, w(), h());
-    
-
+   
     // clear the window, be sure to clear the Z-Buffer too
     glClearColor(0.2f, 0.2f, .2f, 0); // background should be blue
     glClearStencil(0);
@@ -285,45 +312,43 @@ void MyGlWindow::draw() {
 
     // Draw the floor
     setProjection();
-    floor->setupFloor();
-    floor->draw();
 
     setupLight(m_viewer->getViewPoint().x, m_viewer->getViewPoint().y, m_viewer->getViewPoint().z);
 
     // Draw coordinate axes
-    glLineWidth(3.0f);
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(0.0f, 100.0f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(100.0f, 0.1f, 0.0f);
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(0.0f, 0.1f, 100.0f);
-    glEnd();
-    glLineWidth(1.0f);
+    //glLineWidth(3.0f);
+    //glBegin(GL_LINES);
+    //glColor3f(1, 0, 0);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(0.0f, 100.0f, 0.0f);
+    //glColor3f(0.0f, 1.0f, 0.0f);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(100.0f, 0.1f, 0.0f);
+    //glColor3f(0.0f, 0.0f, 1.0f);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(0.0f, 0.1f, 100.0f);
+    //glEnd();
+    //glLineWidth(1.0f);
 
     glDisable(GL_LIGHTING);
     glEnable(GL_BLEND);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
-    glEnable(GL_COLOR_MATERIAL);
 
+    floor->draw(floorTextureID);
+    outFloor->draw(outFloorTextureID);
+
+    glEnable(GL_COLOR_MATERIAL);
     for (auto body: gameRigidBodies) {
         if (body == playerCube->getBody()) {
-            playerCube->draw();
+            playerCube->draw(holeTextureID);
         }
     }
 
-    drawModel(mesh); // Draw the loaded model for the building  
+    simplePhysics->render(0, textureID);
 
-
-    simplePhysics->render(0);
-
-    putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
-    putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);
+    putText("Score :", 10, 10, 0.5, 0.5, 1);
+    putText(score->getScoreString().c_str(), 125, 10, 0.5, 0.5, 1);
 }
 
 void MyGlWindow::resetTest() {
@@ -343,7 +368,7 @@ void MyGlWindow::update() {
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);
 
-    std::vector<cyclone::RigidBody *> boxes = simplePhysics->getAllRigidBoxes();
+    std::vector<cyclone::RigidBody *> boxes = simplePhysics->getRigidBoxes();
     playerCube->checkSwallowObjects(boxes);
 
     simplePhysics->update(duration);

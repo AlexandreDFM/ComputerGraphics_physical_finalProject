@@ -40,10 +40,10 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Counter.H>
-#include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Value_Slider.H>
+#include <FL/Fl_Double_Window.H>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -59,10 +59,10 @@
 #include "precision.h"
 
 #include <ctime>
-#include <chrono>
 #include <vector>
-#include <iostream>
+#include <chrono>
 #include <cyclone.h>
+#include <iostream>
 
 #include "Vec3f.h"
 #include "Viewer.h"
@@ -70,17 +70,12 @@
 #include "DrawUtils.h"
 
 #include "Floor.h"
+#include "Mesh.h"
 #include "Mover.h"
-#include "PlayerHole.h"
 #include "MoverFactory.h"
+#include "PlayerHole.h"
+#include "Score.h"
 #include "SimplePhysics.h"
-
-struct ModelMesh {
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> texCoords;
-    std::vector<unsigned int> indices;
-};
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -102,13 +97,14 @@ public:
     void step();
 
     void createGameObjects();
+    void AddModelToRigidBodies(const std::string &filename, SimplePhysics &physics);
 
 private:
     void draw() override;
     int handle(int e) override;
-    void drawModel(const ModelMesh &modelMesh);
+    void drawModel(const Mesh &modelMesh);
     void LoadModel(std::string filename);
-    void LoadTexture(std::string filename);
+    void LoadTexture(std::string filename, GLuint &newTextureID);
 
     Viewer *m_viewer;
     float fieldOfView;
@@ -117,15 +113,21 @@ private:
 
     cyclone::World *physicsWorld;
 
+    Score *score;
+
     // Rigid bodies for game objects
-    std::vector<cyclone::RigidBody *> gameRigidBodies;
-    PlayerHole *playerCube; // The player cube object
     Floor *floor;
+    Floor *outFloor; // Second floor for the building
     Mover *building;
 
     GLuint textureID;
-    ModelMesh mesh; // Mesh for the player cube
+    GLuint floorTextureID;
+    GLuint outFloorTextureID;
+    GLuint holeTextureID;
+    Mesh mesh; // Mesh for the player cube
+    PlayerHole *playerCube;
     SimplePhysics *simplePhysics;
+    std::vector<cyclone::RigidBody *> gameRigidBodies;
 
     // Movement state flags
     bool moveForward = false;

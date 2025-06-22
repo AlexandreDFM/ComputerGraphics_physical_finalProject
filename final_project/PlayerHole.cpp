@@ -26,6 +26,7 @@
  */
 
 #include "PlayerHole.h"
+#include <windows.h>
 
 PlayerHole::PlayerHole() :
     swallowRadius(5.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
@@ -59,8 +60,8 @@ void PlayerHole::update(float duration) {
 
     // Normalize diagonal movement
     if (moveForward && moveLeft) {
-        velocity.x = -moveSpeed * 0.7071f; // cos(45 degrees)
-        velocity.z = -moveSpeed * 0.7071f; // sin(45 degrees)
+        velocity.x = -moveSpeed * 0.7071f;
+        velocity.z = -moveSpeed * 0.7071f;
     } else if (moveForward && moveRight) {
         velocity.x = moveSpeed * 0.7071f;
         velocity.z = -moveSpeed * 0.7071f;
@@ -85,40 +86,65 @@ void PlayerHole::update(float duration) {
     cyclone::Vector3 currentPos = body->getPosition();
     cyclone::Vector3 newPos = currentPos + velocity * duration;
 
+    // Clamp position to stay within [-100, 100] range in x and z
+    // This ensures the player hole does not move out of bounds
+    newPos.x = max(-100.0f + swallowRadius, min(100.0f - swallowRadius, newPos.x));
+    newPos.z = max(-100.0f + swallowRadius, min(100.0f - swallowRadius, newPos.z));
+
     // Update position and velocity
     body->setPosition(newPos);
     body->setVelocity(velocity);
     body->calculateDerivedData(); // Ensure transform matrix is updated
 }
 
-void PlayerHole::draw() {
-    // Get the transform matrix from the rigid body
+
+void PlayerHole::draw(GLuint textureID) {
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glColor3f(1, 1, 1);
+
+    // Transform
     float transform[16];
     body->getGLTransform(transform);
-
-    // Apply the transform to the modelview matrix
     glPushMatrix();
     glMultMatrixf(transform);
 
-    // Draw a visual representation for the hole
-    glColor4f(colorR, colorG, colorB, 0.8f);
-
-    // Draw a disc on the ground plane
+    // Draw textured disc
     glBegin(GL_TRIANGLE_FAN);
-    glVertex3f(0.0f, 0.0f, 0.0f); // Center at ground level
-    int segments = 30;
+    // Center vertex (at UV 0.5,0.5)
+    glNormal3f(0, 1, 0);
+    glTexCoord2f(0.5f, 0.5f);
+    glVertex3f(0.0f, 0.0f, 0.0f);
+
+    const int segments = 30;
     for (int i = 0; i <= segments; ++i) {
-        float angle = 2.0f * static_cast<float>(M_PI) * float(i) / float(segments);
-        glVertex3f(std::cos(angle) * swallowRadius, 0.0f, std::sin(angle) * swallowRadius);
+        float angle = 2.0f * M_PI * float(i) / float(segments);
+        float x = std::cos(angle) * swallowRadius;
+        float z = std::sin(angle) * swallowRadius;
+
+        // compute UV on circle
+        float u = 0.5f + 0.5f * std::cos(angle);
+        float v = 0.5f + 0.5f * std::sin(angle);
+
+        glNormal3f(0, 1, 0);
+        glTexCoord2f(u, v);
+        glVertex3f(x, 0.0f, z);
     }
     glEnd();
 
-    // Draw a small indicator sphere at the hole's center
-    glColor4f(1.0f, 0.0f, 0.0f, 1.0f); // Red color
-    glutSolidSphere(0.2f, 10, 10); // Small sphere to mark the center
+    // Small white sphere at center
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(1, 1, 1, 1);
+    glutSolidSphere(0.2f, 10, 10);
 
     glPopMatrix();
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_TEXTURE_2D);
 }
+
 
 void PlayerHole::setPosition(const cyclone::Vector3 &pos) {
     body->setPosition(pos);
@@ -145,16 +171,17 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
 
         cyclone::Vector3 objectPosition = currentBody->getPosition();
         cyclone::Vector3 displacement = objectPosition - holePosition;
-        float distance = displacement.magnitude();
+        cyclone::real distance = displacement.magnitude();
 
         // Check if object is close to the hole
         if (distance < swallowRadius) {
             // If the object is within the swallowing radius, apply a force pulling it towards the hole
             cyclone::Vector3 pullDirection = displacement.unit();
-            float pullForceMagnitude = (swallowRadius - distance) * 20.0f;
+            cyclone::real pullForceMagnitude = (swallowRadius - distance) * 20.0f;
             cyclone::Vector3 pullForce = pullDirection * pullForceMagnitude;
             pullForce.invert();
             currentBody->addForce(pullForce);
+            
 
             if (distance < swallowRadius * 0.7f) {
                 // Deactivate the floor for the box take normal gravity
@@ -163,21 +190,28 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
                 // currentBody->setCanSleep(true);
                 // currentBody->setAwake(true);
                 // currentBody->setVelocity(cyclone::Vector3(0, 0, 0));
+                currentBody->addRotation(pullForce * 0.01f);
                 simplePhysics->setSwallowed(currentBody, true);
-
             }
 
             // Check if the object is very close to be considered swallowed
             if (distance < swallowRadius * 0.1f) {
-                // Remove the swallowed object from SimplePhysics
                 simplePhysics->removeBox(currentBody);
                 it = objects.erase(it);
-
-                // Increase hole size
                 swallowRadius += 0.5f;
+                score->addToScore(1);
                 continue;
             }
         }
+
+        if (objectPosition.y < -5.0f) {
+            simplePhysics->removeBox(currentBody);
+            it = objects.erase(it);
+             swallowRadius += 0.5f;
+            score->addToScore(1);
+            continue;
+        }
+
         ++it;
     }
 }

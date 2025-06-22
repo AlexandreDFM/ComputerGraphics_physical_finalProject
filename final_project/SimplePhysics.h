@@ -3,6 +3,7 @@
 #include <GL/gl.h>
 #include <vector>
 
+#include "Mesh.h"
 #include "collide_fine.h"
 #include "contacts.h"
 #include "world.h"
@@ -14,6 +15,12 @@ public:
         body->setCanSleep(true);
         body->setAwake(true);
         isBeingDragged = false;
+        mesh = Mesh(
+            {},
+            {},
+            {},
+            {}
+        );
     }
 
     ~Box() {
@@ -29,15 +36,27 @@ public:
         body->setVelocity(velocity);
         body->setRotation(cyclone::Vector3(0, 0, 0));
         body->setMass(1.0f);
+
+        cyclone::Matrix3 tensor;
+        tensor.setBlockInertiaTensor(halfSize, 1.0f); // Inertia tensor matrix
+        body->setInertiaTensor(tensor);
+
         body->setLinearDamping(0.95f);
         body->setAngularDamping(0.8f);
         body->clearAccumulators();
         body->setAcceleration(cyclone::Vector3(0, -9.81f, 0));
+        body->setAwake(true);
+        body->setCanSleep(true);
 
+        body->calculateDerivedData();
         // Set up the collision box
         halfSize = extents;
         offset = cyclone::Matrix4();
         calculateInternals();
+    }
+
+    void setMesh(const Mesh& mesh) {
+        this->mesh = mesh;
     }
 
     void startDragging() {
@@ -68,29 +87,9 @@ public:
         return body->getPosition();
     }
 
-    cyclone::RigidBody* getBody() {
-        return body;
-    }
+    cyclone::RigidBody *getBody() { return body; }
 
-    void draw(int shadow) {
-        GLfloat mat[16];
-        body->getGLTransform(mat);
-
-        if (shadow) {
-            glColor4f(0.2f, 0.2f, 0.2f, 0.5f);
-        } else if (isBeingDragged) {
-            glColor3f(1.0f, 0.5f, 0.5f); // Reddish color when being dragged
-        } else if (body->getAwake()) {
-            glColor3f(0.7f, 0.7f, 1.0f);
-        } else {
-            glColor3f(1.0f, 0.7f, 0.7f);
-        }
-
-        glPushMatrix();
-        glMultMatrixf(mat);
-        glScalef(halfSize.x * 2, halfSize.y * 2, halfSize.z * 2);
-        glutSolidCube(1.0f);
-
+    static void drawAxe(int shadow) {
         if (!shadow) {
             // Draw axes in the same transform (no extra rotation)
             glDisable(GL_LIGHTING);
@@ -113,19 +112,50 @@ public:
             glLineWidth(1.0f);
             glEnable(GL_LIGHTING);
         }
-
-        glPopMatrix();
     }
 
-    void drawWithName(int name) {
+    void drawHitbox(int name, int shadow) const {
         GLfloat mat[16];
         body->getGLTransform(mat);
+
+        if (shadow) {
+            glColor4f(0.2f, 0.2f, 0.2f, 0.5f);
+        } else if (isBeingDragged) {
+            glColor3f(1.0f, 0.5f, 0.5f);
+        } else if (body->getAwake()) {
+            glColor3f(0.7f, 0.7f, 1.0f);
+        } else {
+            glColor3f(1.0f, 0.7f, 0.7f);
+        }
 
         glLoadName(name);
         glPushMatrix();
         glMultMatrixf(mat);
-        glScalef(halfSize.x * 2, halfSize.y * 2, halfSize.z * 2);
-        glutSolidCube(1.0f);
+        glScalef(static_cast<GLfloat>(halfSize.x) * 2, static_cast<GLfloat>(halfSize.y) * 2, static_cast<GLfloat>(halfSize.z) * 2);
+        glutWireCube(1.0f); // Draw a wireframe cube for the hitbox
+        glPopMatrix();
+    }
+
+    void draw(int name, int shadow, const GLuint textureID) {
+        GLfloat mat[16];
+        body->getGLTransform(mat);
+        const cyclone::Vector3 position = body->getPosition();
+
+        if (shadow) {
+            glColor4f(0.2f, 0.2f, 0.2f, 0.5f);
+        } else if (isBeingDragged) {
+            glColor3f(1.0f, 0.5f, 0.5f);
+        } else if (body->getAwake()) {
+            glColor3f(0.7f, 0.7f, 1.0f);
+        } else {
+            glColor3f(1.0f, 0.7f, 0.7f);
+        }
+
+        glLoadName(name);
+        glPushMatrix();
+        glMultMatrixf(mat);
+        glScalef(static_cast<GLfloat>(0.2f * (halfSize.x)) * 2, static_cast<GLfloat>(0.1f * (halfSize.y)) * 2, static_cast<GLfloat>(0.2f * (halfSize.z)) * 2);
+        mesh.drawModel(mesh, textureID);
         glPopMatrix();
     }
     
@@ -142,6 +172,7 @@ private:
     bool isBeingDragged;
     bool valid = true;
     bool swallowed = false;
+    Mesh mesh;
 };
 
 class SimplePhysics {
@@ -179,11 +210,11 @@ public:
     void reset();
     void generateContacts();
     void update(cyclone::real duration);
-    void render(int shadow);
+    void render(int shadow, const GLuint textureID);
 
-    void drawWithNames() {
+    void drawWithNames(const GLuint textureID) {
         for (int i = 0; i < boxData.size(); i++) {
-            boxData[i]->drawWithName(i + 1); // Use 1-based indices for picking
+            boxData[i]->draw(i + 1, 0, textureID); // Use 1-based indices for picking
         }
     }
 
@@ -194,7 +225,11 @@ public:
         return nullptr;
     }
 
-    std::vector<cyclone::RigidBody *> getAllRigidBoxes() {
+    std::vector<Box*> getBoxes() {
+        return boxData;
+    }
+
+    std::vector<cyclone::RigidBody *> getRigidBoxes() {
         std::vector<cyclone::RigidBody *> boxes;
         for (auto i : boxData) {
             if (i->isValid() && i->getBody() != nullptr) {

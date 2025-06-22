@@ -6,11 +6,11 @@
 
 class Floor {
 public:
-    Floor();
+    Floor(int size = 200, float height = 0.0f);
     ~Floor();
 
     // Drawing methods
-    void draw();
+    void draw(GLuint textureID);
     void setupFloor();
 
     // Physics properties
