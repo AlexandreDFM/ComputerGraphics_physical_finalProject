@@ -40,11 +40,12 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Counter.H>
-#include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Value_Slider.H>
+#include <FL/Fl_Double_Window.H>
 
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
@@ -52,25 +53,30 @@
 #include "body.h"
 #include "core.h"
 #include "math.h"
-#include "precision.h"
 #include "stdio.h"
-#include "timing.h"
 #include "world.h"
+#include "timing.h"
+#include "precision.h"
 
-#include <chrono>
 #include <ctime>
-#include <iostream>
 #include <vector>
+#include <chrono>
+#include <iostream>
+#include <cyclone.h>
+#include <filesystem>
 
-#include "3DUtils.h"
-#include "DrawUtils.h"
 #include "Vec3f.h"
 #include "Viewer.h"
+#include "3DUtils.h"
+#include "DrawUtils.h"
 
 #include "Floor.h"
+#include "Mesh.h"
 #include "Mover.h"
 #include "MoverFactory.h"
 #include "PlayerHole.h"
+#include "Score.h"
+#include "SimplePhysics.h"
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -83,37 +89,62 @@ public:
     int run;
     void update();
     void doPick();
-    void resetTest();
+    void reset();
     int selected;
     void putText(const char *str, int x, int y, float r, float g, float b);
-    void setProjectileMode() const;
-
-    const char *getProjectileMode() const;
-    void step();
-
     void createGameObjects();
+    void AddModelToRigidBodies(SimplePhysics &physics);
+
+    // Timer controls
+    void startTimer();
+    void resetTimer();
+    float getTimerSeconds() const { return timerSeconds; }
+    bool isTimerRunning() const { return timerRunning; }
+
+    void setCameraLocked(bool locked) { cameraLocked = locked; }
 
 private:
     void draw() override;
     int handle(int e) override;
+    void drawModel(const Mesh &modelMesh);
+    void LoadModel(std::string filename, Mesh &newMesh);
+    void LoadTexture(std::string filename, GLuint &newTextureID);
 
     Viewer *m_viewer;
     float fieldOfView;
     std::map<int, Mover *> m_movers;
     std::vector<Mover *> m_moverConnection;
 
-    cyclone::World *physicsWorld;
+    Score *score;
 
     // Rigid bodies for game objects
-    std::vector<cyclone::RigidBody *> gameRigidBodies;
-    PlayerHole *playerCube; // The player cube object
     Floor *floor;
+    Floor *outFloor; // Second floor for the building
+    Mover *building;
+
+    GLuint textureID;
+    GLuint floorTextureID;
+    GLuint outFloorTextureID;
+    GLuint holeTextureID;
+    Mesh aptMesh; // Mesh for the player cube
+    Mesh treeMesh; // Mesh for the tree
+    PlayerHole *playerCube;
+    SimplePhysics *simplePhysics;
+    std::vector<cyclone::RigidBody *> gameRigidBodies;
 
     // Movement state flags
     bool moveForward = false;
     bool moveBackward = false;
     bool moveLeft = false;
     bool moveRight = false;
+
+    bool textureLoaded = false;
+
+    // Timer state
+    float timerSeconds = 0.0f;
+    bool timerRunning = false;
+
+    bool cameraLocked = true;
 
     void setProjection(int clearProjection = 1);
     void getMouseNDC(float &x, float &y);

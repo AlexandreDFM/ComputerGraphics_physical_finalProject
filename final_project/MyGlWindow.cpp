@@ -26,8 +26,12 @@
  */
 
 #include "MyGlWindow.h"
-#include <FL/Fl.H>
-#include <cyclone.h>
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 static double DEFAULT_VIEW_POINT[3] = {30, 30, 30};
 static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
@@ -54,17 +58,13 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
     run = 0;
     selected = -1;
 
-    // Initialize the physics world
-    physicsWorld = new cyclone::World(20); // Allow up to 20 contacts
-
     // Create game objects
     createGameObjects();
+
+    textureLoaded = false;
 }
 
 MyGlWindow::~MyGlWindow() {
-    // Clean up the physics world
-    delete physicsWorld;
-
     // Clean up rigid bodies
     for (auto body: gameRigidBodies) {
         if (body != playerCube->getBody() && body != floor->getBody()) {
@@ -76,13 +76,147 @@ MyGlWindow::~MyGlWindow() {
 }
 
 void MyGlWindow::createGameObjects() {
+    // Create score object
+    score = new Score(0);
+
     // Create the floor
     floor = new Floor();
     gameRigidBodies.push_back(floor->getBody());
 
+    outFloor = new Floor(350, -0.1f);
+
     // Create the player cube
     playerCube = new PlayerHole();
     gameRigidBodies.push_back(playerCube->getBody());
+
+    // Create the simple physics world with boxes
+    simplePhysics = new SimplePhysics();
+
+    playerCube->setSimplePhysics(simplePhysics);
+    playerCube->setScore(score);
+    simplePhysics->update(0.3f);
+
+    // Integrate model into the physics system
+    AddModelToRigidBodies(*simplePhysics);
+}
+
+void MyGlWindow::AddModelToRigidBodies(SimplePhysics& physics) {
+
+    // const std::string apartmentPath = "../../../Models/apartment.obj";
+    // const std::string treePath = "../../../Models/tree3.obj";
+    const std::string apartmentPath = (std::filesystem::current_path() / "Models" / "apartment.obj").string();
+    const std::string treePath = (std::filesystem::current_path() / "Models" / "tree3.obj").string();
+    srand(static_cast<unsigned int>(std::time(nullptr))); // Seed the random number generator
+
+    // Load the model
+    LoadModel(apartmentPath, aptMesh);
+    LoadModel(treePath, treeMesh);
+
+    // Iterate through all rigid bodies in the physics system
+    for (auto& box : physics.getBoxes()) {
+        // Set the mesh for the rigid body
+        box->setMesh((rand() % 2 == 0) ? aptMesh : treeMesh);
+    }
+
+    std::cout << "Model added to all rigid bodies in the physics system." << std::endl;
+}
+
+void MyGlWindow::LoadModel(std::string filename, Mesh &newMesh) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err, warn;
+
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), nullptr, true);
+
+    if (!warn.empty())
+        std::cerr << "TinyObjLoader warning: " << warn << std::endl;
+    if (!err.empty())
+        std::cerr << "TinyObjLoader error: " << err << std::endl;
+    if (!ret) {
+        std::cerr << "Failed to load model: " << filename << std::endl;
+        return;
+    }
+
+    // Compute bounding box
+    float minX = FLT_MAX, minY = FLT_MAX, minZ = FLT_MAX;
+    float maxX = -FLT_MAX, maxY = -FLT_MAX, maxZ = -FLT_MAX;
+
+    float extentX = maxX - minX;
+    float extentY = maxY - minY;
+    float extentZ = maxZ - minZ;
+    float maxExtent = std::max({extentX, extentY, extentZ});
+    float targetSize = 1.0f; // You can change this to any size you want
+    float scale = targetSize / maxExtent;
+
+    for (size_t i = 0; i < attrib.vertices.size(); i += 3) {
+        float x = attrib.vertices[i + 0];
+        float y = attrib.vertices[i + 1];
+        float z = attrib.vertices[i + 2];
+
+        minX = std::min(minX, x);
+        maxX = std::max(maxX, x);
+        minY = std::min(minY, y);
+        maxY = std::max(maxY, y);
+        minZ = std::min(minZ, z);
+        maxZ = std::max(maxZ, z);
+    }
+
+    newMesh.SetBoundingBox(cyclone::Vector3(minX, minY, minZ), cyclone::Vector3(maxX, maxY, maxZ));
+
+    // Center of the bounding box
+    float centerX = (minX + maxX) * 0.5f;
+    float centerY = (minY + maxY) * 0.5f;
+    float centerZ = (minZ + maxZ) * 0.5f;
+
+    // Clear any previous data
+    newMesh.clear();
+
+    for (const auto &shape: shapes) {
+        for (const auto &index: shape.mesh.indices) {
+            // Vertex
+            float x = attrib.vertices[3 * index.vertex_index + 0] - centerX;
+            float y = attrib.vertices[3 * index.vertex_index + 1] - centerY;
+            float z = attrib.vertices[3 * index.vertex_index + 2] - centerZ;
+            newMesh.addVertex(x, y, z);
+
+            // Normal
+            if (!attrib.normals.empty() && index.normal_index >= 0) {
+                newMesh.addNormal(attrib.normals[3 * index.normal_index + 0], attrib.normals[3 * index.normal_index + 1],
+                               attrib.normals[3 * index.normal_index + 2]);
+            }
+
+            // Texture coordinate
+            if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
+                newMesh.addTextureCoord(attrib.texcoords[2 * index.texcoord_index + 0],
+                                     1.0f - attrib.texcoords[2 * index.texcoord_index + 1]);
+            }
+
+            newMesh.addIndex(static_cast<unsigned int>(newMesh.getIndices().size()));
+        }
+    }
+}
+
+
+void MyGlWindow::LoadTexture(std::string filename, GLuint &newTextureID) {
+    glGenTextures(1, &newTextureID);
+    glBindTexture(GL_TEXTURE_2D, newTextureID);
+    // Load the image data (you can use a library like SOIL or stb_image.h)
+    int width, height, channels;
+    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
+    if (data) {
+        GLenum format = (channels == 3) ? GL_RGB : GL_RGBA;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
+    } else {
+        std::cerr << "Failed to load texture: " << filename << std::endl;
+    }
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 void MyGlWindow::setupLight(float x, float y, float z) {
@@ -131,7 +265,56 @@ void setupObjects() {
     glStencilMask(0x1); // only deal with the 1st bit
 }
 
+void MyGlWindow::drawModel(const Mesh &modelMesh) {
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
+    glColor3f(1.0f, 1.0f, 1.0f); // Set color to white for texture mapping
+    glBindTexture(GL_TEXTURE_2D, textureID); // <-- bind your texture
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, modelMesh.getVertices().data());
+
+    if (!modelMesh.getNormals().empty()) {
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glNormalPointer(GL_FLOAT, 0, modelMesh.getNormals().data());
+    }
+
+    if (!modelMesh.getTextureCoords().empty()) {
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glTexCoordPointer(2, GL_FLOAT, 0, modelMesh.getTextureCoords().data()); // <-- setup UVs
+    }
+
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(modelMesh.getIndices().size()), GL_UNSIGNED_INT, modelMesh.getIndices().data());
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    if (!modelMesh.getNormals().empty())
+        glDisableClientState(GL_NORMAL_ARRAY);
+    if (!modelMesh.getTextureCoords().empty())
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING); // Disable lighting after drawing the model
+}
+
+
+
 void MyGlWindow::draw() {
+    make_current(); // Ensure context is current (usually already is in FLTK draw())
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW\n";
+        exit(1);
+    }
+
+    if (!textureLoaded) {
+        const std::string currentPath = std::filesystem::current_path().string();
+        LoadTexture(currentPath + "/Models/apartment_texture.png", textureID);
+        LoadTexture(currentPath + "/Models/Grass.png", floorTextureID);
+        LoadTexture(currentPath + "/Models/Concrete.png", outFloorTextureID);
+        LoadTexture(currentPath + "/Models/holeTex.png", holeTextureID);
+        textureLoaded = true;
+    }
+
     glViewport(0, 0, w(), h());
 
     // clear the window, be sure to clear the Z-Buffer too
@@ -139,54 +322,91 @@ void MyGlWindow::draw() {
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH);
+    glEnable(GL_NORMALIZE);
 
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
     // Draw the floor
     setProjection();
-    floor->setupFloor();
-    floor->draw();
 
     setupLight(m_viewer->getViewPoint().x, m_viewer->getViewPoint().y, m_viewer->getViewPoint().z);
 
     // Draw coordinate axes
-    glLineWidth(3.0f);
-    glBegin(GL_LINES);
-    glColor3f(1, 0, 0);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(0.0f, 100.0f, 0.0f);
-    glColor3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(100.0f, 0.1f, 0.0f);
-    glColor3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(0.0f, 0.1f, 0.0f);
-    glVertex3f(0.0f, 0.1f, 100.0f);
-    glEnd();
-    glLineWidth(1.0f);
+    //glLineWidth(3.0f);
+    //glBegin(GL_LINES);
+    //glColor3f(1, 0, 0);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(0.0f, 100.0f, 0.0f);
+    //glColor3f(0.0f, 1.0f, 0.0f);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(100.0f, 0.1f, 0.0f);
+    //glColor3f(0.0f, 0.0f, 1.0f);
+    //glVertex3f(0.0f, 0.1f, 0.0f);
+    //glVertex3f(0.0f, 0.1f, 100.0f);
+    //glEnd();
+    //glLineWidth(1.0f);
 
     glDisable(GL_LIGHTING);
     glEnable(GL_BLEND);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
-    glEnable(GL_COLOR_MATERIAL);
 
+    floor->draw(floorTextureID);
+    outFloor->draw(outFloorTextureID);
+
+    glEnable(GL_COLOR_MATERIAL);
     for (auto body: gameRigidBodies) {
         if (body == playerCube->getBody()) {
-            playerCube->draw();
+            playerCube->draw(holeTextureID);
         }
     }
 
-    putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
-    putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);
+    simplePhysics->render(0, textureID);
+
+    // Draw timer above the score
+    char timerStr[64];
+    int timerY = 35; // Y position above the score
+    snprintf(timerStr, sizeof(timerStr), "Time: %.2f s", timerSeconds);
+    putText(timerStr, 10, timerY, 1, 1, 0.5f);
+
+    putText("Score :", 10, 10, 0.5, 0.5, 1);
+    putText(score->getScoreString().c_str(), 125, 10, 0.5, 0.5, 1);
+
+    if (!run) {
+        // print a white background
+        glColor4f(0.2f, 0.2f, 0.2f, 0.5f);
+        glBegin(GL_QUADS);
+        glVertex2f(0, 0);
+        glVertex2f(w(), 0);
+        glVertex2f(w(), h());
+        glVertex2f(0, h());
+        glEnd();
+        glColor3f(1, 1, 1);
+        // print the message in the middle of the screen
+        putText("Game is not running press on the run button", w() / 2 - 300, h() / 2 - 20, 1, 1, 1);
+        putText("Press 'R' to reset the game", w() / 2 - 175, h() / 2 + 20, 1, 1, 1);
+    }
 }
 
-void MyGlWindow::resetTest() {
-    if (!m_movers.empty()) {
-        for (auto mover: m_movers) {
-            mover.second->reset();
-            (mover.second->*(mover.second->projectileMap[mover.second->getProjectileType()]))();
-        }
-    }
+void MyGlWindow::reset() {
+    run = 0;
+    ui->value(0);
+
+    // Reset timer
+    resetTimer();
+
+    // Reset score
+    if (score) score->setScore(0);
+
+    // Reset playerCube and physics state
+    if (playerCube) playerCube->setPosition(cyclone::Vector3(0, 2, 0));
+    if (simplePhysics) simplePhysics->reset();
+
+    // Optionally, reset movement flags
+    moveForward = moveBackward = moveLeft = moveRight = false;
+
+    // Redraw window
+    redraw();
 }
 
 void MyGlWindow::update() {
@@ -197,30 +417,47 @@ void MyGlWindow::update() {
     if (duration <= 0.0f)
         return;
 
+    if (!run) {
+        // If not running, just update the player cube
+        playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
+        playerCube->update(duration);
+        return;
+    }
+
+    timerSeconds += duration;
+
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);
 
-    // Handle physics simulation for other objects if running
-    if (run) {
-        // Check for collisions with floor
-        for (auto body: gameRigidBodies) {
-            if (body != playerCube->getBody() && body != floor->getBody()) {
-                cyclone::Vector3 pos = body->getPosition();
-                float size = 2.0f; // Assuming objects are cubes of size 2
+    std::vector<cyclone::RigidBody *> boxes = simplePhysics->getRigidBoxes();
+    playerCube->checkSwallowObjects(boxes);
 
-                // If object is below floor level, bounce it back up
-                if (pos.y < 5.0f) {
-                    cyclone::Vector3 velocity = body->getVelocity();
-                    velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
-                    body->setVelocity(velocity);
-                    pos.y = 4.0f; // Set position to floor level
-                    body->setPosition(pos);
-                }
+    simplePhysics->update(duration);
 
-                body->integrate(duration);
-            }
-        }
-    }
+    // playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
+    // playerCube->update(duration);
+    //
+    // // Handle physics simulation for other objects if running
+    // if (run) {
+    //     // Check for collisions with floor
+    //     for (auto body: gameRigidBodies) {
+    //         if (body != playerCube->getBody() && body != floor->getBody()) {
+    //             cyclone::Vector3 pos = body->getPosition();
+    //             float size = 2.0f; // Assuming objects are cubes of size 2
+    //
+    //             // If object is below floor level, bounce it back up
+    //             if (pos.y < 5.0f) {
+    //                 cyclone::Vector3 velocity = body->getVelocity();
+    //                 velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
+    //                 body->setVelocity(velocity);
+    //                 pos.y = 4.0f; // Set position to floor level
+    //                 body->setPosition(pos);
+    //             }
+    //
+    //             body->integrate(duration);
+    //         }
+    //     }
+    // }
 
     // Force redraw to update visual position
     redraw();
@@ -281,16 +518,22 @@ void MyGlWindow::setProjection(int clearProjection)
         glLoadIdentity();
     // compute the aspect ratio so we don't distort things
     const double aspect = static_cast<double>(w()) / static_cast<double>(h());
-    gluPerspective(fieldOfView, aspect, 1, 1000);
+    double orthoSize = 25;
+    glOrtho(-orthoSize * aspect, orthoSize * aspect, -orthoSize, orthoSize, -1000, 1000);
 
     // put the camera where we want it to be
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    // use the transformation in the ArcBall
 
-    gluLookAt(m_viewer->getViewPoint().x, m_viewer->getViewPoint().y, m_viewer->getViewPoint().z,
-              m_viewer->getViewCenter().x, m_viewer->getViewCenter().y, m_viewer->getViewCenter().z,
+    double distance = 50;
+    double camX = playerCube->getPosition().x + distance + m_viewer->getViewPoint().x;
+    double camY = playerCube->getPosition().y + distance * 0.5 + m_viewer->getViewPoint().y;
+    double camZ = playerCube->getPosition().z + distance + m_viewer->getViewPoint().z;
+
+    gluLookAt(camX, camY, camZ,
+              playerCube->getPosition().x, playerCube->getPosition().y, playerCube->getPosition().z,
               m_viewer->getUpVector().x, m_viewer->getUpVector().y, m_viewer->getUpVector().z);
+
 
     //	glDisable(GL_BLEND);
 }
@@ -382,17 +625,17 @@ int MyGlWindow::handle(int e) {
                 const double fractionChangeY =
                         static_cast<double>(m_lastMouseY - Fl::event_y()) / static_cast<double>(this->h());
 
-                if (Fl::event_state(FL_ALT)) {
-                    if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
-                                            true);
-                    }
-                } else if (Fl::event_button2()) {
-                    m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
-                                        true);
-                } else {
-                    if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        m_viewer->rotate(static_cast<float>(fractionChangeX), static_cast<float>(fractionChangeY));
+                if (!cameraLocked) {
+                    if (Fl::event_state(FL_ALT)) {
+                        if (m_pressedMouseButton == FL_LEFT_MOUSE) {
+                            m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY), true);
+                        }
+                    } else if (Fl::event_button2()) {
+                        m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY), true);
+                    } else {
+                        if (m_pressedMouseButton == FL_LEFT_MOUSE) {
+                            m_viewer->rotate(static_cast<float>(fractionChangeX), static_cast<float>(fractionChangeY));
+                        }
                     }
                 }
 
@@ -402,22 +645,23 @@ int MyGlWindow::handle(int e) {
             }
             return 1;
         case FL_MOUSEWHEEL:
-            if (Fl::event_dy() < 0)
-                m_viewer->zoom(0.1f);
-            else if (Fl::event_dy() > 0)
-                m_viewer->zoom(-0.1f);
-            redraw();
-            return 1;
-        case FL_KEYBOARD:
+            if (!cameraLocked) {
+                if (Fl::event_dy() < 0)
+                    m_viewer->zoom(0.1f);
+                else if (Fl::event_dy() > 0)
+                    m_viewer->zoom(-0.1f);
+                redraw();
+                return 1;
+            }
+            break;
+        case FL_KEYDOWN:
             key = Fl::event_key();
             switch (key) {
                 case 'w':
                 case 'W':
-                case 'z':
-                case 'Z':
                     wasPressed = true;
                     moveForward = true;
-                    resetTest();
+                    playerCube->setColor(1.0f, 0.0f, 0.0f);
                     playerCube->setColor(1.0f, 0.0f, 0.0f);
                     break;
                 case 's':
@@ -428,12 +672,9 @@ int MyGlWindow::handle(int e) {
                     break;
                 case 'a':
                 case 'A':
-                case 'q':
-                case 'Q':
                     wasPressed = true;
                     moveLeft = true;
                     playerCube->setColor(0.0f, 0.0f, 1.0f);
-                    step();
                     break;
                 case 'd':
                 case 'D':
@@ -441,11 +682,16 @@ int MyGlWindow::handle(int e) {
                     moveRight = true;
                     playerCube->setColor(1.0f, 1.0f, 0.0f);
                     break;
+                case 'r':
+                    reset();
+                    return 1;
                 case FL_Up:
+                    if (cameraLocked) break;
                     m_viewer->zoom(-0.1f);
                     redraw();
                     return 1;
                 case FL_Down:
+                    if (cameraLocked) break;
                     m_viewer->zoom(0.1f);
                     redraw();
                     return 1;
@@ -461,6 +707,34 @@ int MyGlWindow::handle(int e) {
                 return 1;
             }
             return 0;
+        case FL_KEYUP:
+            key = Fl::event_key();
+            switch (key) {
+                case 'w':
+                case 'W':
+                    moveForward = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 's':
+                case 'S':
+                    moveBackward = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 'a':
+                case 'A':
+                    moveLeft = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                case 'd':
+                case 'D':
+                    moveRight = false;
+                    playerCube->setColor(1.0f, 0.4f, 0.7f);
+                    break;
+                default:
+                    break;
+            }
+            redraw();
+            return 1;
         default:
             return Fl_Gl_Window::handle(e);
     }
@@ -513,26 +787,12 @@ void MyGlWindow::putText(const char *str, int x, int y, float r, float g, float 
     glEnable(GL_LIGHTING);
 }
 
-void MyGlWindow::setProjectileMode() const {
-    if (!m_movers.empty()) {
-        for (auto mover: m_movers) {
-            int currentType = mover.second->getProjectileType();
-            int nextType = (currentType + 1) % Mover::projectileType::NUM_PROJECTILE_TYPES;
-            mover.second->setProjectileType(static_cast<enum Mover::projectileType>(nextType));
-            (mover.second->*(mover.second->projectileMap[mover.second->getProjectileType()]))();
-        }
-    }
+// Timer control methods
+void MyGlWindow::startTimer() {
+    timerRunning = true;
 }
 
-const char *MyGlWindow::getProjectileMode() const {
-    if (!m_movers.empty()) {
-        return Mover::getProjectileModeType().at(m_movers.begin()->second->getProjectileType());
-    }
-    return nullptr;
-}
-
-void MyGlWindow::step() {
-    TimingData::update();
-
-    float duration = 0.03f;
+void MyGlWindow::resetTimer() {
+    timerSeconds = 0.0f;
+    timerRunning = false;
 }

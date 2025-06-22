@@ -48,11 +48,15 @@ set(CURRENT final_project)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(MODELS_DIR ${CMAKE_SOURCE_DIR}/Models)
+set(OUTPUT_MODELS_DIR ${CMAKE_BINARY_DIR}/Models)
+
 project(${PROJECT_NAME})
 
 # Find packages through vcpkg
 find_package(FLTK CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(GLEW REQUIRED)
 
 if (UNIX)
   find_package(FLTK REQUIRED)
@@ -69,6 +73,19 @@ file(GLOB_RECURSE SOURCES
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Cyclone/" "${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT}")
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+# Add a custom command to copy the Models directory only when needed
+add_custom_command(
+    OUTPUT ${OUTPUT_MODELS_DIR}/.models_copied
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${MODELS_DIR} ${OUTPUT_MODELS_DIR}
+    COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT_MODELS_DIR}/.models_copied
+    DEPENDS ${MODELS_DIR}
+    COMMENT "Copying Models directory to build directory"
+)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE fltk fltk_gl fltk_forms fltk_images glm::glm)
+add_custom_target(copy_models DEPENDS ${OUTPUT_MODELS_DIR}/.models_copied)
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+add_dependencies(${PROJECT_NAME} copy_models)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE fltk fltk_gl fltk_forms fltk_images glm::glm GLEW::GLEW)
+

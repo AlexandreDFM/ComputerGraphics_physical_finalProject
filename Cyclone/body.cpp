@@ -13,6 +13,7 @@
 #include <body.h>
 #include <memory.h>
 #include <assert.h>
+#include <iostream>
 
 using namespace cyclone;
 
@@ -567,6 +568,7 @@ void RigidBody::addForceAtPoint(const Vector3 &force,
 
 void RigidBody::addTorque(const Vector3 &torque)
 {
+    std::cout << "Adding torque: " << torque.x << ", " << torque.y << ", " << torque.z << std::endl;
     torqueAccum += torque;
     isAwake = true;
 }

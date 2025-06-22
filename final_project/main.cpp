@@ -42,6 +42,7 @@ void changeFrameCB(Fl_Widget *w, void *data) {
 
     MyGlWindow *win = static_cast<MyGlWindow *>(data);
     win->redraw();
+    win->take_focus();
 }
 
 void idleCB(void *w) {
@@ -51,9 +52,10 @@ void idleCB(void *w) {
         win->update();
     }
     win->redraw();
+    win->take_focus();
 }
 
-void but_cb(Fl_Widget *o, void *data) {
+void runGame(Fl_Widget *o, void *data) {
     const Fl_Button *b = static_cast<Fl_Button *>(o);
     MyGlWindow *win = static_cast<MyGlWindow *>(data);
     if (b->value())
@@ -61,25 +63,14 @@ void but_cb(Fl_Widget *o, void *data) {
     else
         win->run = 0;
     win->damage(1);
+    win->take_focus();
 }
 
-void resetTest(Fl_Widget *o, void *data) {
+void resetGame(Fl_Widget *o, void *data) {
     MyGlWindow *win = static_cast<MyGlWindow *>(data);
-    win->resetTest();
+    win->reset();
     win->damage(1);
-}
-
-void objectMode(Fl_Widget *o, void *data) {
-    MyGlWindow *win = static_cast<MyGlWindow *>(data);
-    win->setProjectileMode();
-    win->damage(1);
-}
-
-void step(Fl_Widget *o, void *data) {
-    MyGlWindow *win = static_cast<MyGlWindow *>(data);
-    run_btn->value(0); // turn off the run button first
-    win->run = 0; // disable the run variable
-    win->step(); // call step()
+    win->take_focus();
 }
 
 int main() {
@@ -101,7 +92,7 @@ int main() {
     widgets->end();
     Fl_Group::current()->resizable(widgets);
 
-    Fl_Choice *choice = new Fl_Choice(100, height - 40, 50, 20, "FrameRate");
+    Fl_Choice *choice = new Fl_Choice(90, height - 40, 50, 20, "FrameRate");
     choice->add("15");
     choice->add("30");
     choice->add("60");
@@ -117,17 +108,11 @@ int main() {
     constexpr int windowWidthCenter = width / 2 - buttonWidth / 2;
 
     run_btn = new Fl_Light_Button(windowWidthCenter , height - 40, buttonWidth, buttonHeight, "Run");
-    run_btn->callback(but_cb, gl);
+    run_btn->callback(runGame, gl);
     gl->ui = run_btn;
 
-    Fl_Button *resetTestButton = new Fl_Button(windowWidthCenter + 100, height - 40, buttonWidth, buttonHeight, "Reset_Test");
-    resetTestButton->callback(resetTest, gl);
-
-    Fl_Button *objectModeButton = new Fl_Button(windowWidthCenter + 200, height - 40, buttonWidth, buttonHeight, "Object_Mode");
-    objectModeButton->callback(objectMode, gl);
-
-    Fl_Button *stepButton = new Fl_Button(windowWidthCenter + 300, height - 40, buttonWidth, buttonHeight, "Step");
-    stepButton->callback(step, gl);
+    Fl_Button *resetButton = new Fl_Button(width - buttonWidth - 20, height - 40, buttonWidth, buttonHeight, "Reset");
+    resetButton->callback(resetGame, gl);
 
     wind->end();
 
