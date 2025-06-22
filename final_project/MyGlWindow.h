@@ -73,13 +73,6 @@
 #include "PlayerHole.h"
 #include "MoverFactory.h"
 #include "SimplePhysics.h"
-#include "tiny_obj_loader.h"
-
-struct ModelMesh {
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<unsigned int> indices;
-};
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -99,14 +92,12 @@ public:
 
     const char *getProjectileMode() const;
     void step();
-    void drawModel(const ModelMesh &modelMesh);
 
     void createGameObjects();
 
 private:
     void draw() override;
     int handle(int e) override;
-    void LoadModel(std::string filename);
 
     Viewer *m_viewer;
     float fieldOfView;
@@ -121,7 +112,6 @@ private:
     Floor *floor;
     Mover *building;
 
-    ModelMesh mesh; // Mesh for the player cube
     SimplePhysics *simplePhysics;
 
     // Movement state flags
