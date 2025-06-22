@@ -13,9 +13,9 @@ void SimplePhysics::reset() {
 
     for (auto box: boxData) {
         const float scale = sizeDist(gen);
-        cyclone::Vector3 extents(1.0f, 1.0f, 1.0f);
+        cyclone::Vector3 extents(1.0f, 2.0f, 1.0f);
         extents *= scale;
-        cyclone::Vector3 position(posDist(gen), 0.2f, posDist(gen));
+        cyclone::Vector3 position(posDist(gen), 50.f, posDist(gen));
         cyclone::Quaternion orientation;
 
         box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0) // No initial velocity
@@ -77,6 +77,7 @@ void SimplePhysics::update(cyclone::real duration) {
 void SimplePhysics::render(int shadow, const GLuint textureID) {
     for (int i = 0; i < boxData.size(); i++) {
         if (boxData[i]->isValid()) {
+            boxData[i]->drawHitbox(i + 1, shadow); // Use 1-based indices for picking
             boxData[i]->draw(i + 1, shadow, textureID);
         }
     }

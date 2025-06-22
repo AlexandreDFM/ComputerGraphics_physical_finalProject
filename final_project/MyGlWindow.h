@@ -104,7 +104,7 @@ private:
     int handle(int e) override;
     void drawModel(const Mesh &modelMesh);
     void LoadModel(std::string filename);
-    void LoadTexture(std::string filename);
+    void LoadTexture(std::string filename, GLuint &newTextureID);
 
     Viewer *m_viewer;
     float fieldOfView;
@@ -117,9 +117,13 @@ private:
 
     // Rigid bodies for game objects
     Floor *floor;
+    Floor *outFloor; // Second floor for the building
     Mover *building;
 
     GLuint textureID;
+    GLuint floorTextureID;
+    GLuint outFloorTextureID;
+    GLuint holeTextureID;
     Mesh mesh; // Mesh for the player cube
     PlayerHole *playerCube;
     SimplePhysics *simplePhysics;

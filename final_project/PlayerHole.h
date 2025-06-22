@@ -45,7 +45,7 @@ class PlayerHole {
         // Movement control
         void setMovement(bool forward, bool backward, bool left, bool right);
         void update(float duration);
-        void draw();
+        void draw(GLuint textureID);
 
         // Getters
         cyclone::RigidBody *getBody() const { return body; }

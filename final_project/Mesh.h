@@ -2,6 +2,7 @@
 #define MESH_H
 
 #include <vector>
+#include <iostream>
 
 class Mesh {
 public:

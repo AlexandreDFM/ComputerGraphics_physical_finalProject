@@ -36,11 +36,19 @@ public:
         body->setVelocity(velocity);
         body->setRotation(cyclone::Vector3(0, 0, 0));
         body->setMass(1.0f);
+
+        cyclone::Matrix3 tensor;
+        tensor.setBlockInertiaTensor(halfSize, 1.0f); // Inertia tensor matrix
+        body->setInertiaTensor(tensor);
+
         body->setLinearDamping(0.95f);
         body->setAngularDamping(0.8f);
         body->clearAccumulators();
         body->setAcceleration(cyclone::Vector3(0, -9.81f, 0));
+        body->setAwake(true);
+        body->setCanSleep(true);
 
+        body->calculateDerivedData();
         // Set up the collision box
         halfSize = extents;
         offset = cyclone::Matrix4();
@@ -123,8 +131,8 @@ public:
         glLoadName(name);
         glPushMatrix();
         glMultMatrixf(mat);
-        glScalef(static_cast<GLfloat>(halfSize.x) * 2, static_cast<GLfloat>(halfSize.y * 2), static_cast<GLfloat>(halfSize.z * 2));
-        glutSolidCube(1.0f);
+        glScalef(static_cast<GLfloat>(halfSize.x) * 2, static_cast<GLfloat>(halfSize.y) * 2, static_cast<GLfloat>(halfSize.z) * 2);
+        glutWireCube(1.0f); // Draw a wireframe cube for the hitbox
         glPopMatrix();
     }
 
@@ -143,13 +151,10 @@ public:
             glColor3f(1.0f, 0.7f, 0.7f);
         }
 
-        mat[12] = static_cast<GLfloat>(position.x - halfSize.x);
-        mat[13] = static_cast<GLfloat>(position.y - halfSize.y);
-        mat[14] = static_cast<GLfloat>(position.z + halfSize.z);
-
+        glLoadName(name);
         glPushMatrix();
         glMultMatrixf(mat);
-        glScalef(static_cast<GLfloat>(0.2f * (halfSize.x * 2)), static_cast<GLfloat>(0.1f * (halfSize.y * 2)), static_cast<GLfloat>(0.2f * (halfSize.z * 2)));
+        glScalef(static_cast<GLfloat>(0.2f * (halfSize.x)) * 2, static_cast<GLfloat>(0.1f * (halfSize.y)) * 2, static_cast<GLfloat>(0.2f * (halfSize.z)) * 2);
         mesh.drawModel(mesh, textureID);
         glPopMatrix();
     }
