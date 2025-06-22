@@ -1,6 +1,7 @@
 #pragma once
 #include <FL/glut.H>
 #include <GL/gl.h>
+#include <vector>
 
 #include "collide_fine.h"
 #include "contacts.h"
@@ -14,6 +15,7 @@ public:
         body->setAwake(true);
         isBeingDragged = false;
     }
+
     ~Box() {
         delete body;
     }
@@ -64,6 +66,10 @@ public:
 
     cyclone::Vector3 getPosition() const {
         return body->getPosition();
+    }
+
+    cyclone::RigidBody* getBody() {
+        return body;
     }
 
     void draw(int shadow) {
@@ -122,28 +128,49 @@ public:
         glutSolidCube(1.0f);
         glPopMatrix();
     }
+    
+    bool isValid() const { return valid; }
+    bool isSwallowed() const { return swallowed; }
+    void invalidate() {
+        valid = false;
+        delete body;
+        body = nullptr;
+    }
+    void setSwallowed(bool swallowed) { this->swallowed = swallowed; }
 
 private:
     bool isBeingDragged;
+    bool valid = true;
+    bool swallowed = false;
 };
 
 class SimplePhysics {
 public:
     static const unsigned maxContacts = 256;
+    std::vector<Box*> boxData;
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;
     cyclone::ContactResolver* resolver;
-    Box boxData[5];  // 5 boxes
 
     SimplePhysics() {
         contacts = new cyclone::Contact[maxContacts];
         cData = new cyclone::CollisionData();
         cData->contactArray = contacts;
         resolver = new cyclone::ContactResolver(maxContacts * 2, maxContacts * 2, 0.001f, 0.001f);
+        // Initialize vector with new Box objects
+        for (int i = 0; i < 100; i++) {
+            boxData.push_back(new Box());
+        }
         reset();
     }
 
     ~SimplePhysics() {
+        // Clean up Box objects
+        for (Box* box : boxData) {
+            delete box;
+        }
+        boxData.clear();
+        
         delete[] contacts;
         delete cData;
         delete resolver;
@@ -155,15 +182,43 @@ public:
     void render(int shadow);
 
     void drawWithNames() {
-        for (int i = 0; i < 5; i++) {
-            boxData[i].drawWithName(i + 1); // Use 1-based indices for picking
+        for (int i = 0; i < boxData.size(); i++) {
+            boxData[i]->drawWithName(i + 1); // Use 1-based indices for picking
         }
     }
 
-    Box* getBox(int index) {
-        if (index >= 1 && index <= 5) { // 1-based index
-            return &boxData[index - 1];
+    Box *getBox(int index) {
+        if (boxData.size() > index) {
+            return boxData[index];
         }
         return nullptr;
+    }
+
+    std::vector<cyclone::RigidBody *> getAllRigidBoxes() {
+        std::vector<cyclone::RigidBody *> boxes;
+        for (auto i : boxData) {
+            if (i->isValid() && i->getBody() != nullptr) {
+                boxes.push_back(i->getBody());
+            }
+        }
+        return boxes;
+    }
+
+    void removeBox(cyclone::RigidBody* body) {
+        for (int i = 0; i < boxData.size(); i++) {
+            if (boxData[i]->getBody() == body) {
+                boxData[i]->invalidate();
+                break;
+            }
+        }
+    }
+
+    void setSwallowed(cyclone::RigidBody* body, bool swallowed) {
+        for (int i = 0; i < boxData.size(); i++) {
+            if (boxData[i]->getBody() == body) {
+                boxData[i]->setSwallowed(swallowed);
+                break;
+            }
+        }
     }
 };

@@ -52,25 +52,27 @@
 #include "body.h"
 #include "core.h"
 #include "math.h"
-#include "precision.h"
 #include "stdio.h"
-#include "timing.h"
 #include "world.h"
+#include "timing.h"
+#include "precision.h"
 
-#include <chrono>
 #include <ctime>
-#include <iostream>
+#include <chrono>
 #include <vector>
+#include <iostream>
+#include <cyclone.h>
 
-#include "3DUtils.h"
-#include "DrawUtils.h"
 #include "Vec3f.h"
 #include "Viewer.h"
+#include "3DUtils.h"
+#include "DrawUtils.h"
 
 #include "Floor.h"
 #include "Mover.h"
-#include "MoverFactory.h"
 #include "PlayerHole.h"
+#include "MoverFactory.h"
+#include "SimplePhysics.h"
 #include "tiny_obj_loader.h"
 
 struct ModelMesh {
@@ -120,6 +122,7 @@ private:
     Mover *building;
 
     ModelMesh mesh; // Mesh for the player cube
+    SimplePhysics *simplePhysics;
 
     // Movement state flags
     bool moveForward = false;

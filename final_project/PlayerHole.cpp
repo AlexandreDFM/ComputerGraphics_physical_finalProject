@@ -28,7 +28,7 @@
 #include "PlayerHole.h"
 
 PlayerHole::PlayerHole() :
-    swallowRadius(7.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
+    swallowRadius(5.0f), moveSpeed(10.0f), moveForward(false), moveBackward(false), moveLeft(false), moveRight(false),
     cubeSize(2.0f),
     colorR(1.0f), colorG(0.4f), colorB(0.7f) // Initial pink color
 {
@@ -153,17 +153,28 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
             cyclone::Vector3 pullDirection = displacement.unit();
             float pullForceMagnitude = (swallowRadius - distance) * 20.0f;
             cyclone::Vector3 pullForce = pullDirection * pullForceMagnitude;
+            pullForce.invert();
             currentBody->addForce(pullForce);
 
+            if (distance < swallowRadius * 0.7f) {
+                // Deactivate the floor for the box take normal gravity
+                // currentBody->setDamping(0.9f, 0.9f);
+                // currentBody->setAcceleration(cyclone::Vector3::GRAVITY * 0);
+                // currentBody->setCanSleep(true);
+                // currentBody->setAwake(true);
+                // currentBody->setVelocity(cyclone::Vector3(0, 0, 0));
+                simplePhysics->setSwallowed(currentBody, true);
+
+            }
+
             // Check if the object is very close to be considered swallowed
-            if (distance < swallowRadius * 0.5f) {
-                // Remove the swallowed object
-                delete currentBody;
+            if (distance < swallowRadius * 0.1f) {
+                // Remove the swallowed object from SimplePhysics
+                simplePhysics->removeBox(currentBody);
                 it = objects.erase(it);
 
                 // Increase hole size
                 swallowRadius += 0.5f;
-
                 continue;
             }
         }
