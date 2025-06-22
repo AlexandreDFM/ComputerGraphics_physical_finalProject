@@ -625,17 +625,17 @@ int MyGlWindow::handle(int e) {
                 const double fractionChangeY =
                         static_cast<double>(m_lastMouseY - Fl::event_y()) / static_cast<double>(this->h());
 
-                if (Fl::event_state(FL_ALT)) {
-                    if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
-                                            true);
-                    }
-                } else if (Fl::event_button2()) {
-                    m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY),
-                                        true);
-                } else {
-                    if (m_pressedMouseButton == FL_LEFT_MOUSE) {
-                        m_viewer->rotate(static_cast<float>(fractionChangeX), static_cast<float>(fractionChangeY));
+                if (!cameraLocked) {
+                    if (Fl::event_state(FL_ALT)) {
+                        if (m_pressedMouseButton == FL_LEFT_MOUSE) {
+                            m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY), true);
+                        }
+                    } else if (Fl::event_button2()) {
+                        m_viewer->translate(-static_cast<float>(fractionChangeX), -static_cast<float>(fractionChangeY), true);
+                    } else {
+                        if (m_pressedMouseButton == FL_LEFT_MOUSE) {
+                            m_viewer->rotate(static_cast<float>(fractionChangeX), static_cast<float>(fractionChangeY));
+                        }
                     }
                 }
 
@@ -645,12 +645,15 @@ int MyGlWindow::handle(int e) {
             }
             return 1;
         case FL_MOUSEWHEEL:
-            if (Fl::event_dy() < 0)
-                m_viewer->zoom(0.1f);
-            else if (Fl::event_dy() > 0)
-                m_viewer->zoom(-0.1f);
-            redraw();
-            return 1;
+            if (!cameraLocked) {
+                if (Fl::event_dy() < 0)
+                    m_viewer->zoom(0.1f);
+                else if (Fl::event_dy() > 0)
+                    m_viewer->zoom(-0.1f);
+                redraw();
+                return 1;
+            }
+            break;
         case FL_KEYDOWN:
             key = Fl::event_key();
             switch (key) {
@@ -683,10 +686,12 @@ int MyGlWindow::handle(int e) {
                     reset();
                     return 1;
                 case FL_Up:
+                    if (cameraLocked) break;
                     m_viewer->zoom(-0.1f);
                     redraw();
                     return 1;
                 case FL_Down:
+                    if (cameraLocked) break;
                     m_viewer->zoom(0.1f);
                     redraw();
                     return 1;

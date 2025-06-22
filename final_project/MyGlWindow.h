@@ -101,6 +101,8 @@ public:
     float getTimerSeconds() const { return timerSeconds; }
     bool isTimerRunning() const { return timerRunning; }
 
+    void setCameraLocked(bool locked) { cameraLocked = locked; }
+
 private:
     void draw() override;
     int handle(int e) override;
@@ -141,6 +143,8 @@ private:
     // Timer state
     float timerSeconds = 0.0f;
     bool timerRunning = false;
+
+    bool cameraLocked = true;
 
     void setProjection(int clearProjection = 1);
     void getMouseNDC(float &x, float &y);
