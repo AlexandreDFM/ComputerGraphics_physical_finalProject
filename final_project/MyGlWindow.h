@@ -106,6 +106,7 @@ public:
 private:
     void draw() override;
     int handle(int e) override;
+    void drawModel(const ModelMesh &modelMesh);
     void LoadModel(std::string filename);
     void LoadTexture(std::string filename);
 

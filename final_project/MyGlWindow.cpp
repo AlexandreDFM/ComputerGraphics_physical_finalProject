@@ -98,9 +98,7 @@ void MyGlWindow::createGameObjects() {
 
     // Create other game objects using the factory
     building = MoverFactory::getInstance().createMover(cyclone::Vector3(0, 2, 0));
-    LoadModel("../../../apartment.obj"); // Load the model for the building
-    //LoadTexture("../../../apartment_texture.png"); // Load the texture for the building
-    //gameRigidBodies.push_back(building->getBody());
+    LoadModel("../../../Models/apartment.obj"); // Load the model for the building
 }
 
 void MyGlWindow::LoadModel(std::string filename) {
@@ -229,6 +227,7 @@ void setupObjects() {
 
 void MyGlWindow::drawModel(const ModelMesh &modelMesh) {
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
     glColor3f(1.0f, 1.0f, 1.0f); // Set color to white for texture mapping
     glBindTexture(GL_TEXTURE_2D, textureID); // <-- bind your texture
 
@@ -253,7 +252,9 @@ void MyGlWindow::drawModel(const ModelMesh &modelMesh) {
     if (!modelMesh.texCoords.empty())
         glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
+
     glDisable(GL_TEXTURE_2D);
+    glDisable(GL_LIGHTING); // Disable lighting after drawing the model
 }
 
 
@@ -266,7 +267,7 @@ void MyGlWindow::draw() {
     }
 
     if (!textureLoaded) {
-        LoadTexture("../../../apartment_texture.png");
+        LoadTexture("../../../Models/apartment_texture.png");
         textureLoaded = true;
     }
 
@@ -315,6 +316,9 @@ void MyGlWindow::draw() {
             playerCube->draw();
         }
     }
+
+    drawModel(mesh); // Draw the loaded model for the building  
+
 
     simplePhysics->render(0);
 
@@ -572,6 +576,7 @@ int MyGlWindow::handle(int e) {
                     wasPressed = true;
                     moveForward = true;
                     resetTest();
+                    playerCube->setColor(1.0f, 0.0f, 0.0f);
                     playerCube->setColor(1.0f, 0.0f, 0.0f);
                     break;
                 case 's':
