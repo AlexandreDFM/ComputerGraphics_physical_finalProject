@@ -83,6 +83,47 @@ void MyGlWindow::createGameObjects() {
     // Create the player cube
     playerCube = new PlayerHole();
     gameRigidBodies.push_back(playerCube->getBody());
+
+    // Create other game objects using the factory
+    building = MoverFactory::getInstance().createMover(cyclone::Vector3(0, 2, 0));
+    LoadModel("Models/apartment.obj"); // Load the model for the building
+    //gameRigidBodies.push_back(building->getBody());
+}
+
+void MyGlWindow::LoadModel(std::string filename) {
+    tinyobj::attrib_t attrib;  
+    std::vector<tinyobj::shape_t> shapes;  
+    std::vector<tinyobj::material_t> materials;  
+    std::string err;  
+
+    // Corrected function call to match the expected arguments for tinyobj::LoadObj  
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, filename.c_str());
+    //if (!warn.empty()) {  
+    //    std::cerr << "TinyObjLoader warning: " << warn << std::endl;  
+    //}  
+    if (!err.empty()) {  
+        std::cerr << "TinyObjLoader error: " << err << std::endl;  
+    }  
+    if (!ret) {  
+        std::cerr << "Failed to load model: " << filename << std::endl;  
+        return;  
+    }  
+
+    for (const auto &shape : shapes) {  
+        for (const auto &index : shape.mesh.indices) {  
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 0]);  
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);  
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);  
+
+            if (!attrib.normals.empty()) {  
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 0]);  
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 1]);  
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 2]);  
+            }  
+
+            mesh.indices.push_back(mesh.indices.size());  
+        }  
+    }  
 }
 
 void MyGlWindow::setupLight(float x, float y, float z) {
@@ -131,6 +172,23 @@ void setupObjects() {
     glStencilMask(0x1); // only deal with the 1st bit
 }
 
+void MyGlWindow::drawModel(const ModelMesh &modelMesh) {
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, modelMesh.vertices.data());
+
+    if (!modelMesh.normals.empty()) {
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glNormalPointer(GL_FLOAT, 0, modelMesh.normals.data());
+    }
+
+    glDrawElements(GL_TRIANGLES, modelMesh.indices.size(), GL_UNSIGNED_INT, modelMesh.indices.data());
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    if (!modelMesh.normals.empty())
+        glDisableClientState(GL_NORMAL_ARRAY);
+}
+
+
 void MyGlWindow::draw() {
     glViewport(0, 0, w(), h());
 
@@ -175,6 +233,8 @@ void MyGlWindow::draw() {
             playerCube->draw();
         }
     }
+
+    drawModel(mesh);
 
     putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
     putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);

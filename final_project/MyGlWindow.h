@@ -71,6 +71,13 @@
 #include "Mover.h"
 #include "MoverFactory.h"
 #include "PlayerHole.h"
+#include "tiny_obj_loader.h"
+
+struct ModelMesh {
+    std::vector<float> vertices;
+    std::vector<float> normals;
+    std::vector<unsigned int> indices;
+};
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -90,12 +97,14 @@ public:
 
     const char *getProjectileMode() const;
     void step();
+    void drawModel(const ModelMesh &modelMesh);
 
     void createGameObjects();
 
 private:
     void draw() override;
     int handle(int e) override;
+    void LoadModel(std::string filename);
 
     Viewer *m_viewer;
     float fieldOfView;
@@ -108,6 +117,9 @@ private:
     std::vector<cyclone::RigidBody *> gameRigidBodies;
     PlayerHole *playerCube; // The player cube object
     Floor *floor;
+    Mover *building;
+
+    ModelMesh mesh; // Mesh for the player cube
 
     // Movement state flags
     bool moveForward = false;
