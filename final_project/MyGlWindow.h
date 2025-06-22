@@ -40,10 +40,10 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
 #include <FL/Fl_Counter.H>
-#include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Gl_Window.H>
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Value_Slider.H>
+#include <FL/Fl_Double_Window.H>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
@@ -58,10 +58,10 @@
 #include "precision.h"
 
 #include <ctime>
-#include <chrono>
 #include <vector>
-#include <iostream>
+#include <chrono>
 #include <cyclone.h>
+#include <iostream>
 
 #include "Vec3f.h"
 #include "Viewer.h"
@@ -70,8 +70,9 @@
 
 #include "Floor.h"
 #include "Mover.h"
-#include "PlayerHole.h"
+#include "Score.h"
 #include "MoverFactory.h"
+#include "PlayerHole.h"
 #include "SimplePhysics.h"
 
 class MyGlWindow : public Fl_Gl_Window {
@@ -106,11 +107,13 @@ private:
 
     cyclone::World *physicsWorld;
 
+    Score *score;
+
     // Rigid bodies for game objects
-    std::vector<cyclone::RigidBody *> gameRigidBodies;
-    PlayerHole *playerCube; // The player cube object
     Floor *floor;
+    PlayerHole *playerCube;
     SimplePhysics *simplePhysics;
+    std::vector<cyclone::RigidBody *> gameRigidBodies;
 
     // Movement state flags
     bool moveForward = false;

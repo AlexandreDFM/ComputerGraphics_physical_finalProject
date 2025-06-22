@@ -74,6 +74,9 @@ MyGlWindow::~MyGlWindow() {
 }
 
 void MyGlWindow::createGameObjects() {
+    // Create score object
+    score = new Score(0);
+
     // Create the floor
     floor = new Floor();
     gameRigidBodies.push_back(floor->getBody());
@@ -86,6 +89,7 @@ void MyGlWindow::createGameObjects() {
     simplePhysics = new SimplePhysics();
 
     playerCube->setSimplePhysics(simplePhysics);
+    playerCube->setScore(score);
     simplePhysics->update(0.3f);
 }
 
@@ -182,8 +186,8 @@ void MyGlWindow::draw() {
 
     simplePhysics->render(0);
 
-    putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
-    putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);
+    putText("Score :", 10, 10, 0.5, 0.5, 1);
+    putText(score->getScoreString().c_str(), 125, 10, 0.5, 0.5, 1);
 }
 
 void MyGlWindow::resetTest() {

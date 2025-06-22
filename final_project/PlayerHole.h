@@ -31,10 +31,10 @@
 #define M_PI 3.14159265358979323846
 
 #include <FL/Fl.H>
-#include <iostream>
-#include <GL/glut.h>
 #include <cyclone.h>
+#include <GL/glut.h>
 
+#include "Score.h"
 #include "SimplePhysics.h"
 
 class PlayerHole {
@@ -57,11 +57,13 @@ class PlayerHole {
         void setMoveSpeed(float speed) { moveSpeed = speed; }
         void setColor(float r, float g, float b);
         void setSimplePhysics(SimplePhysics *physics) { simplePhysics = physics; }
+        void setScore(Score *s) { score = s; }
 
         // Physics interaction
         void checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects);
 
     private:
+        Score *score;
         cyclone::RigidBody *body;
         SimplePhysics *simplePhysics;
         float swallowRadius;
