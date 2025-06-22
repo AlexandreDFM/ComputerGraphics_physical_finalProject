@@ -109,8 +109,10 @@ void MyGlWindow::createGameObjects() {
 
 void MyGlWindow::AddModelToRigidBodies(SimplePhysics& physics) {
 
-    const std::string apartmentPath = "../../../Models/apartment.obj";
-    const std::string treePath = "../../../Models/tree3.obj";
+    // const std::string apartmentPath = "../../../Models/apartment.obj";
+    // const std::string treePath = "../../../Models/tree3.obj";
+    const std::string apartmentPath = (std::filesystem::current_path() / "Models" / "apartment.obj").string();
+    const std::string treePath = (std::filesystem::current_path() / "Models" / "tree3.obj").string();
     srand(static_cast<unsigned int>(std::time(nullptr))); // Seed the random number generator
 
     // Load the model
@@ -312,10 +314,11 @@ void MyGlWindow::draw() {
     }
 
     if (!textureLoaded) {
-        LoadTexture("../../../Models/apartment_texture.png", textureID);
-        LoadTexture("../../../Models/Grass.png", floorTextureID);
-        LoadTexture("../../../Models/Concrete.png", outFloorTextureID);
-        LoadTexture("../../../Models/holeTex.png", holeTextureID);
+        const std::string currentPath = std::filesystem::current_path().string();
+        LoadTexture(currentPath + "/Models/apartment_texture.png", textureID);
+        LoadTexture(currentPath + "/Models/Grass.png", floorTextureID);
+        LoadTexture(currentPath + "/Models/Concrete.png", outFloorTextureID);
+        LoadTexture(currentPath + "/Models/holeTex.png", holeTextureID);
         textureLoaded = true;
     }
 

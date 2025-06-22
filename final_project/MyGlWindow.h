@@ -61,8 +61,9 @@
 #include <ctime>
 #include <vector>
 #include <chrono>
-#include <cyclone.h>
 #include <iostream>
+#include <cyclone.h>
+#include <filesystem>
 
 #include "Vec3f.h"
 #include "Viewer.h"
