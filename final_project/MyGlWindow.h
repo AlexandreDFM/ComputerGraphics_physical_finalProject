@@ -70,18 +70,12 @@
 #include "DrawUtils.h"
 
 #include "Floor.h"
+#include "Mesh.h"
 #include "Mover.h"
-#include "Score.h"
 #include "MoverFactory.h"
 #include "PlayerHole.h"
+#include "Score.h"
 #include "SimplePhysics.h"
-
-struct ModelMesh {
-    std::vector<float> vertices;
-    std::vector<float> normals;
-    std::vector<float> texCoords;
-    std::vector<unsigned int> indices;
-};
 
 class MyGlWindow : public Fl_Gl_Window {
 public:
@@ -103,11 +97,12 @@ public:
     void step();
 
     void createGameObjects();
+    void AddModelToRigidBodies(const std::string &filename, SimplePhysics &physics);
 
 private:
     void draw() override;
     int handle(int e) override;
-    void drawModel(const ModelMesh &modelMesh);
+    void drawModel(const Mesh &modelMesh);
     void LoadModel(std::string filename);
     void LoadTexture(std::string filename);
 
@@ -125,7 +120,7 @@ private:
     Mover *building;
 
     GLuint textureID;
-    ModelMesh mesh; // Mesh for the player cube
+    Mesh mesh; // Mesh for the player cube
     PlayerHole *playerCube;
     SimplePhysics *simplePhysics;
     std::vector<cyclone::RigidBody *> gameRigidBodies;

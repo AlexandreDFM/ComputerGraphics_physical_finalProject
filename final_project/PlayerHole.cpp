@@ -145,13 +145,13 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
 
         cyclone::Vector3 objectPosition = currentBody->getPosition();
         cyclone::Vector3 displacement = objectPosition - holePosition;
-        float distance = displacement.magnitude();
+        cyclone::real distance = displacement.magnitude();
 
         // Check if object is close to the hole
         if (distance < swallowRadius) {
             // If the object is within the swallowing radius, apply a force pulling it towards the hole
             cyclone::Vector3 pullDirection = displacement.unit();
-            float pullForceMagnitude = (swallowRadius - distance) * 20.0f;
+            cyclone::real pullForceMagnitude = (swallowRadius - distance) * 20.0f;
             cyclone::Vector3 pullForce = pullDirection * pullForceMagnitude;
             pullForce.invert();
             currentBody->addForce(pullForce);
@@ -179,7 +179,7 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
         if (objectPosition.y < -5.0f) {
             simplePhysics->removeBox(currentBody);
             it = objects.erase(it);
-            swallowRadius += 0.5f;
+            // swallowRadius += 0.5f;
             score->addToScore(1);
             continue;
         }
