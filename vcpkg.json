@@ -1,5 +1,5 @@
 {
   "name" : "vcpkg-example",
   "version" : "0.0.1",
-  "dependencies" : [ "fltk", "glm" ]
+  "dependencies" : [ "fltk", "glm", "glew" ]
 }

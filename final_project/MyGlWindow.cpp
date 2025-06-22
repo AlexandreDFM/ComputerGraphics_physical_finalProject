@@ -27,6 +27,12 @@
 
 #include "MyGlWindow.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 static double DEFAULT_VIEW_POINT[3] = {30, 30, 30};
 static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
 static double DEFAULT_UP_VECTOR[3] = {0, 1, 0};
@@ -57,6 +63,8 @@ MyGlWindow::MyGlWindow(int x, int y, int w, int h) : Fl_Gl_Window(x, y, w, h) {
 
     // Create game objects
     createGameObjects();
+
+    textureLoaded = false;
 }
 
 MyGlWindow::~MyGlWindow() {
@@ -87,6 +95,90 @@ void MyGlWindow::createGameObjects() {
 
     playerCube->setSimplePhysics(simplePhysics);
     simplePhysics->update(0.3f);
+
+    // Create other game objects using the factory
+    building = MoverFactory::getInstance().createMover(cyclone::Vector3(0, 2, 0));
+    LoadModel("../../../apartment.obj"); // Load the model for the building
+    //LoadTexture("../../../apartment_texture.png"); // Load the texture for the building
+    //gameRigidBodies.push_back(building->getBody());
+}
+
+void MyGlWindow::LoadModel(std::string filename) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    std::string warn;
+
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.c_str(), nullptr, true);
+
+    if (!warn.empty())
+        std::cerr << "TinyObjLoader warning: " << warn << std::endl;
+    if (!err.empty())
+        std::cerr << "TinyObjLoader error: " << err << std::endl;
+    if (!ret) {
+        std::cerr << "Failed to load model: " << filename << std::endl;
+        return;
+    }
+
+    // Clear any previous data
+    mesh.vertices.clear();
+    mesh.normals.clear();
+    mesh.texCoords.clear();
+    mesh.indices.clear();
+
+    for (const auto &shape: shapes) {
+        for (const auto &index: shape.mesh.indices) {
+            // Vertex
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 0]);
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);
+            mesh.vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);
+
+            // Normal
+            if (!attrib.normals.empty() && index.normal_index >= 0) {
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 0]);
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 1]);
+                mesh.normals.push_back(attrib.normals[3 * index.normal_index + 2]);
+            }
+
+            // Texture coordinate (UV)
+            if (!attrib.texcoords.empty() && index.texcoord_index >= 0) {
+                mesh.texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 0]);
+                mesh.texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 1]);
+            } else {
+                // fallback UVs (optional, can remove this else if not desired)
+                mesh.texCoords.push_back(0.0f);
+                mesh.texCoords.push_back(0.0f);
+            }
+
+            mesh.indices.push_back(static_cast<unsigned int>(mesh.indices.size()));
+        }
+    }
+
+    std::cout << "Model loaded with " << mesh.vertices.size() / 3 << " vertices and " << mesh.texCoords.size() / 2
+              << " UVs." << std::endl;
+}
+
+
+void MyGlWindow::LoadTexture(std::string filename) {
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    // Load the image data (you can use a library like SOIL or stb_image.h)
+    int width, height, channels;
+    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &channels, 0);
+    if (data) {
+        GLenum format = (channels == 3) ? GL_RGB : GL_RGBA;
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        stbi_image_free(data);
+    } else {
+        std::cerr << "Failed to load texture: " << filename << std::endl;
+    }
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 void MyGlWindow::setupLight(float x, float y, float z) {
@@ -135,14 +227,58 @@ void setupObjects() {
     glStencilMask(0x1); // only deal with the 1st bit
 }
 
+void MyGlWindow::drawModel(const ModelMesh &modelMesh) {
+    glEnable(GL_TEXTURE_2D);
+    glColor3f(1.0f, 1.0f, 1.0f); // Set color to white for texture mapping
+    glBindTexture(GL_TEXTURE_2D, textureID); // <-- bind your texture
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, modelMesh.vertices.data());
+
+    if (!modelMesh.normals.empty()) {
+        glEnableClientState(GL_NORMAL_ARRAY);
+        glNormalPointer(GL_FLOAT, 0, modelMesh.normals.data());
+    }
+
+    if (!modelMesh.texCoords.empty()) {
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glTexCoordPointer(2, GL_FLOAT, 0, modelMesh.texCoords.data()); // <-- setup UVs
+    }
+
+    glDrawElements(GL_TRIANGLES, modelMesh.indices.size(), GL_UNSIGNED_INT, modelMesh.indices.data());
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    if (!modelMesh.normals.empty())
+        glDisableClientState(GL_NORMAL_ARRAY);
+    if (!modelMesh.texCoords.empty())
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glDisable(GL_TEXTURE_2D);
+}
+
+
+
 void MyGlWindow::draw() {
+    make_current(); // Ensure context is current (usually already is in FLTK draw())
+    if (glewInit() != GLEW_OK) {
+        std::cerr << "Failed to initialize GLEW\n";
+        exit(1);
+    }
+
+    if (!textureLoaded) {
+        LoadTexture("../../../apartment_texture.png");
+        textureLoaded = true;
+    }
+
     glViewport(0, 0, w(), h());
+    
 
     // clear the window, be sure to clear the Z-Buffer too
     glClearColor(0.2f, 0.2f, .2f, 0); // background should be blue
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH);
+    glEnable(GL_NORMALIZE);
 
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
