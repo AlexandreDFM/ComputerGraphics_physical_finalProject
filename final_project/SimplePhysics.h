@@ -146,7 +146,7 @@ private:
 
 class SimplePhysics {
 public:
-    static const unsigned maxContacts = 256;
+    static const unsigned maxContacts = 512;
     std::vector<Box*> boxData;
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;

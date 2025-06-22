@@ -45,6 +45,7 @@
 #include <FL/Fl_Light_Button.H>
 #include <FL/Fl_Value_Slider.H>
 
+#include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
@@ -73,11 +74,13 @@
 #include "PlayerHole.h"
 #include "MoverFactory.h"
 #include "SimplePhysics.h"
-#include "tiny_obj_loader.h"
+
+
 
 struct ModelMesh {
     std::vector<float> vertices;
     std::vector<float> normals;
+    std::vector<float> texCoords;
     std::vector<unsigned int> indices;
 };
 
@@ -107,6 +110,7 @@ private:
     void draw() override;
     int handle(int e) override;
     void LoadModel(std::string filename);
+    void LoadTexture(std::string filename);
 
     Viewer *m_viewer;
     float fieldOfView;
@@ -121,6 +125,7 @@ private:
     Floor *floor;
     Mover *building;
 
+    GLuint textureID;
     ModelMesh mesh; // Mesh for the player cube
     SimplePhysics *simplePhysics;
 
@@ -129,6 +134,8 @@ private:
     bool moveBackward = false;
     bool moveLeft = false;
     bool moveRight = false;
+
+    bool textureLoaded = false;
 
     void setProjection(int clearProjection = 1);
     void getMouseNDC(float &x, float &y);
