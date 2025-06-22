@@ -53,6 +53,7 @@ project(${PROJECT_NAME})
 # Find packages through vcpkg
 find_package(FLTK CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
+find_package(GLEW REQUIRED)
 
 if (UNIX)
   find_package(FLTK REQUIRED)
@@ -71,4 +72,5 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Cyclone/" "${CMAKE_CURRENT_SOUR
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE fltk fltk_gl fltk_forms fltk_images glm::glm)
+target_link_libraries(${PROJECT_NAME} PRIVATE fltk fltk_gl fltk_forms fltk_images glm::glm GLEW::GLEW)
+
