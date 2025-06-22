@@ -8,21 +8,15 @@ void SimplePhysics::reset() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> sizeDist(0.5f, 2.0f);
-    std::uniform_real_distribution<float> posDist(-5.0f, 5.0f);
+    std::uniform_real_distribution<float> posDist(-100.0f, 100.0f);
     std::uniform_real_distribution<float> heightDist(1.0f, 5.0f);
 
-    // Initialize 5 boxes with random sizes and positions
-    for (int i = 0; i < 5; i++) {
+    for (auto box: boxData) {
         cyclone::Vector3 extents(sizeDist(gen), sizeDist(gen), sizeDist(gen));
         cyclone::Vector3 position(posDist(gen), heightDist(gen), posDist(gen));
         cyclone::Quaternion orientation;
-        // orientation.setEuler(0, 0, 0); // No initial rotation
 
-        boxData[i].setState(
-            position,
-            orientation,
-            extents,
-            cyclone::Vector3(0, 0, 0) // No initial velocity
+        box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0) // No initial velocity
         );
     }
 }
@@ -40,16 +34,25 @@ void SimplePhysics::generateContacts() {
     plane.offset = 0;
 
     // Check collisions with ground and between boxes
-    for (Box* box = boxData; box < boxData + 5; box++) {
+    for (auto box: boxData) {
+        if (!box->isValid())
+            continue;
+
         // Check for collisions with the ground plane
-        if (!cData->hasMoreContacts()) return;
-        cyclone::CollisionDetector::boxAndHalfSpace(*box, plane, cData);
+        if (!cData->hasMoreContacts())
+            return;
+        if (!box->isSwallowed()) {
+            cyclone::CollisionDetector::boxAndHalfSpace(*box, plane, cData);
+        }
 
         // Check for collisions with each other box
-        for (Box* other = box + 1; other < boxData + 5; other++) {
-            if (!cData->hasMoreContacts()) return;
-            cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
-        }
+        // for (auto other: boxData) {
+        //     if (!other->isValid())
+        //         continue;
+        //     if (!cData->hasMoreContacts())
+        //         return;
+        //     cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
+        // }
     }
 }
 
@@ -61,16 +64,18 @@ void SimplePhysics::update(cyclone::real duration) {
     resolver->resolveContacts(cData->contactArray, cData->contactCount, duration);
 
     // Update the physics of each box
-    for (Box* box = boxData; box < boxData + 5; box++) {
-        box->body->integrate(duration);
-        box->calculateInternals();
+    for (auto box: boxData) {
+        if (box->isValid()) {
+            box->body->integrate(duration);
+            box->calculateInternals();
+        }
     }
 }
 
 void SimplePhysics::render(int shadow) {
-    // Draw each box
-    for (Box* box = boxData; box < boxData + 5; box++) {
-        std::cout << "Drawing PlayerCube at position: (" << box->getPosition().x << ", " << box->getPosition().y << ", " << box->getPosition().z << ")" << std::endl;
-        box->draw(shadow);
+    for (auto box: boxData) {
+        if (box->isValid()) {
+            box->draw(shadow);
+        }
     }
 }

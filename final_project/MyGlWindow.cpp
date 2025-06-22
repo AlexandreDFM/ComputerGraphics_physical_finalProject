@@ -26,8 +26,6 @@
  */
 
 #include "MyGlWindow.h"
-#include <FL/Fl.H>
-#include <cyclone.h>
 
 static double DEFAULT_VIEW_POINT[3] = {30, 30, 30};
 static double DEFAULT_VIEW_CENTER[3] = {0, 0, 0};
@@ -83,6 +81,12 @@ void MyGlWindow::createGameObjects() {
     // Create the player cube
     playerCube = new PlayerHole();
     gameRigidBodies.push_back(playerCube->getBody());
+
+    // Create the simple physics world with boxes
+    simplePhysics = new SimplePhysics();
+
+    playerCube->setSimplePhysics(simplePhysics);
+    simplePhysics->update(0.3f);
 }
 
 void MyGlWindow::setupLight(float x, float y, float z) {
@@ -176,6 +180,8 @@ void MyGlWindow::draw() {
         }
     }
 
+    simplePhysics->render(0);
+
     putText("STUDENT_ID_AND_NAME", 10, 10, 0.5, 0.5, 1);
     putText(getProjectileMode(), 10, 50, 0.5, 0.5, 1);
 }
@@ -193,6 +199,14 @@ void MyGlWindow::update() {
     TimingData::update();
 
     const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
+
+    playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
+    playerCube->update(duration);
+
+    std::vector<cyclone::RigidBody *> boxes = simplePhysics->getAllRigidBoxes();
+    playerCube->checkSwallowObjects(boxes);
+
+    simplePhysics->update(duration);
 
     if (duration <= 0.0f)
         return;

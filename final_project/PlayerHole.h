@@ -32,8 +32,10 @@
 
 #include <FL/Fl.H>
 #include <iostream>
-#include <cyclone.h>
 #include <GL/glut.h>
+#include <cyclone.h>
+
+#include "SimplePhysics.h"
 
 class PlayerHole {
     public:
@@ -54,12 +56,14 @@ class PlayerHole {
         void setPosition(const cyclone::Vector3 &pos);
         void setMoveSpeed(float speed) { moveSpeed = speed; }
         void setColor(float r, float g, float b);
+        void setSimplePhysics(SimplePhysics *physics) { simplePhysics = physics; }
 
         // Physics interaction
         void checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects);
 
     private:
         cyclone::RigidBody *body;
+        SimplePhysics *simplePhysics;
         float swallowRadius;
         float moveSpeed;
         bool moveForward;
