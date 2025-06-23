@@ -412,10 +412,13 @@ void MyGlWindow::reset() {
 void MyGlWindow::update() {
     TimingData::update();
 
-    const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
-
-    if (duration <= 0.0f)
-        return;
+    // const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
+    // Convert milliseconds to seconds with proper scaling and add maximum time step
+    float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.001f;  // Proper conversion from ms to seconds
+    const float maxTimeStep = 1.0f / 24.0f;  // Maximum 60 FPS equivalent
+    if (duration > maxTimeStep) {
+        duration = maxTimeStep;
+    }
 
     if (!run) {
         // If not running, just update the player cube
@@ -424,7 +427,7 @@ void MyGlWindow::update() {
         return;
     }
 
-    timerSeconds += duration;
+    timerSeconds += duration * 0.3f;
 
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);
@@ -433,31 +436,6 @@ void MyGlWindow::update() {
     playerCube->checkSwallowObjects(boxes);
 
     simplePhysics->update(duration);
-
-    // playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
-    // playerCube->update(duration);
-    //
-    // // Handle physics simulation for other objects if running
-    // if (run) {
-    //     // Check for collisions with floor
-    //     for (auto body: gameRigidBodies) {
-    //         if (body != playerCube->getBody() && body != floor->getBody()) {
-    //             cyclone::Vector3 pos = body->getPosition();
-    //             float size = 2.0f; // Assuming objects are cubes of size 2
-    //
-    //             // If object is below floor level, bounce it back up
-    //             if (pos.y < 5.0f) {
-    //                 cyclone::Vector3 velocity = body->getVelocity();
-    //                 velocity.y = std::abs(velocity.y) * 0.8f; // Bounce with some energy loss
-    //                 body->setVelocity(velocity);
-    //                 pos.y = 4.0f; // Set position to floor level
-    //                 body->setPosition(pos);
-    //             }
-    //
-    //             body->integrate(duration);
-    //         }
-    //     }
-    // }
 
     // Force redraw to update visual position
     redraw();

@@ -11,7 +11,6 @@ public:
 
     // Drawing methods
     void draw(GLuint textureID);
-    void setupFloor();
 
     // Physics properties
     cyclone::RigidBody *getBody() const { return body; }

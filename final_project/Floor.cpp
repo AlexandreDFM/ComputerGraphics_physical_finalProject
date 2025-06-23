@@ -14,13 +14,6 @@ Floor::Floor(int floorSize, float height) : size(floorSize), height(height) {
 
 Floor::~Floor() { delete body; }
 
-//void Floor::setupFloor() {
-//    // Set up floor material properties
-//    GLfloat floorColor[] = {0.5f, 0.5f, 0.5f, 1.0f}; // Gray color
-//    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, floorColor);
-//    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 0.0f);
-//}
-
 void Floor::draw(GLuint textureID) {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);

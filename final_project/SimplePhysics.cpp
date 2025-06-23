@@ -24,9 +24,9 @@ void SimplePhysics::reset() {
 void SimplePhysics::generateContacts() {
     // Set up the collision data structure
     cData->reset(maxContacts);
-    cData->friction = 0.1f;
-    cData->restitution = 0.6f;
-    cData->tolerance = 0.1f;
+    cData->friction = 0.5f;  // Increased friction for better stability
+    cData->restitution = 0.1f;  // Reduced restitution to minimize bouncing
+    cData->tolerance = 0.05f;  // Increased tolerance to prevent micro-collisions
 
     // Create the ground plane
     cyclone::CollisionPlane plane;
@@ -42,7 +42,12 @@ void SimplePhysics::generateContacts() {
         if (!cData->hasMoreContacts())
             return;
         if (!box->isSwallowed()) {
-            cyclone::CollisionDetector::boxAndHalfSpace(*box, plane, cData);
+            // Only generate contacts if the box is close to or below the ground
+            cyclone::Vector3 position = box->getPosition();
+            cyclone::Vector3 extents = box->halfSize;
+            if (position.y - extents.y <= cData->tolerance) {
+                cyclone::CollisionDetector::boxAndHalfSpace(*box, plane, cData);
+            }
         }
 
          //Check for collisions with each other box

@@ -38,18 +38,16 @@ public:
         body->setMass(1.0f);
 
         cyclone::Matrix3 tensor;
-        tensor.setBlockInertiaTensor(halfSize, 1.0f); // Inertia tensor matrix
+        tensor.setBlockInertiaTensor(halfSize, 2.0f);
         body->setInertiaTensor(tensor);
 
-        body->setLinearDamping(0.95f);
-        body->setAngularDamping(0.8f);
+        body->setLinearDamping(0.98f);
+        body->setAngularDamping(0.95f);
         body->clearAccumulators();
         body->setAcceleration(cyclone::Vector3(0, -9.81f, 0));
-        body->setAwake(true);
         body->setCanSleep(true);
 
         body->calculateDerivedData();
-        // Set up the collision box
         halfSize = extents;
         offset = cyclone::Matrix4();
         calculateInternals();
@@ -185,7 +183,7 @@ private:
 
 class SimplePhysics {
 public:
-    static const unsigned maxContacts = 2048;
+    static const unsigned maxContacts = 16048;
     std::vector<Box*> boxData;
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;
@@ -195,7 +193,7 @@ public:
         contacts = new cyclone::Contact[maxContacts];
         cData = new cyclone::CollisionData();
         cData->contactArray = contacts;
-        resolver = new cyclone::ContactResolver(maxContacts * 2, maxContacts * 2, 0.001f, 0.001f);
+        resolver = new cyclone::ContactResolver(maxContacts, maxContacts, 0.01f, 0.01f);
         // Initialize vector with new Box objects
         for (int i = 0; i < 500; i++) {
             boxData.push_back(new Box());
