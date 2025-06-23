@@ -82,7 +82,9 @@ void SimplePhysics::render(int shadow, const GLuint textureID) {
     for (int i = 0; i < boxData.size(); i++) {
         if (boxData[i]->isValid()) {
             boxData[i]->draw(i + 1, shadow, textureID);
-            boxData[i]->drawHitbox(i + 1, shadow);
+            if (m_drawHitboxes) {
+                boxData[i]->drawHitbox(i + 1, shadow);
+            }
         }
     }
 }

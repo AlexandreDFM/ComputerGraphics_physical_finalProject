@@ -189,6 +189,7 @@ public:
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;
     cyclone::ContactResolver* resolver;
+    bool m_drawHitboxes = false;
 
     SimplePhysics() {
         contacts = new cyclone::Contact[maxContacts];
@@ -218,6 +219,8 @@ public:
     void generateContacts();
     void update(cyclone::real duration);
     void render(int shadow, const GLuint textureID);
+
+    void toggleHitboxes() { m_drawHitboxes = !m_drawHitboxes; }
 
     void drawWithNames(const GLuint textureID) {
         for (int i = 0; i < boxData.size(); i++) {

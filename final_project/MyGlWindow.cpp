@@ -75,6 +75,11 @@ MyGlWindow::~MyGlWindow() {
     delete floor;
 }
 
+void MyGlWindow::toggleHitboxes()
+{
+    simplePhysics->toggleHitboxes();
+}
+
 void MyGlWindow::createGameObjects() {
     // Create score object
     score = new Score(0);
@@ -435,7 +440,9 @@ void MyGlWindow::update() {
         return;
     }
 
-    timerSeconds += duration;
+    if (!isTimerRunning()) {
+        timerSeconds += duration;
+    }
 
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);
@@ -781,4 +788,8 @@ void MyGlWindow::startTimer() {
 void MyGlWindow::resetTimer() {
     timerSeconds = 0.0f;
     timerRunning = false;
+}
+
+bool MyGlWindow::isTimerRunning() {
+    return timerRunning;
 }

@@ -73,6 +73,13 @@ void resetGame(Fl_Widget *o, void *data) {
     win->take_focus();
 }
 
+void toggleHitboxCB(Fl_Widget *o, void *data) {
+    MyGlWindow *win = static_cast<MyGlWindow *>(data);
+    win->toggleHitboxes();
+    win->damage(1);
+    win->take_focus();
+}
+
 int main() {
     // plastic
     Fl::scheme("plastic");
@@ -113,6 +120,9 @@ int main() {
 
     Fl_Button *resetButton = new Fl_Button(width - buttonWidth - 20, height - 40, buttonWidth, buttonHeight, "Reset");
     resetButton->callback(resetGame, gl);
+
+    Fl_Button *hitboxButton = new Fl_Button(width - buttonWidth * 2 - 40, height - 40, buttonWidth, buttonHeight, "Toggle Hitbox");
+    hitboxButton->callback(toggleHitboxCB, gl);
 
     wind->end();
 

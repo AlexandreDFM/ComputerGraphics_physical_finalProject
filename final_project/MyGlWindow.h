@@ -94,10 +94,12 @@ public:
     void putText(const char *str, int x, int y, float r, float g, float b);
     void createGameObjects();
     void AddModelToRigidBodies(SimplePhysics &physics);
+    void toggleHitboxes();
 
     // Timer controls
     void startTimer();
     void resetTimer();
+    bool isTimerRunning();
     float getTimerSeconds() const { return timerSeconds; }
     bool isTimerRunning() const { return timerRunning; }
 
