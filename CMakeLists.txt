@@ -50,6 +50,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 set(MODELS_DIR ${CMAKE_SOURCE_DIR}/Models)
 set(OUTPUT_MODELS_DIR ${CMAKE_BINARY_DIR}/Models)
+set(VS_OUTPUT_MODELS_DIR ${CMAKE_BINARY_DIR}/Debug)
 
 project(${PROJECT_NAME})
 
@@ -77,9 +78,9 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Cyclone/" "${CMAKE_CURRENT_SOUR
 add_custom_command(
     OUTPUT ${OUTPUT_MODELS_DIR}/.models_copied
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${MODELS_DIR} ${OUTPUT_MODELS_DIR}
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${MODELS_DIR} ${OUTPUT_MODELS_DIR}/Debug
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${MODELS_DIR} ${VS_OUTPUT_MODELS_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT_MODELS_DIR}/.models_copied
-    COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT_MODELS_DIR}/Debug/.models_copied
+    COMMAND ${CMAKE_COMMAND} -E touch ${VS_OUTPUT_MODELS_DIR}/.models_copied
     DEPENDS ${MODELS_DIR}
     COMMENT "Copying Models directory to build directory"
 )
