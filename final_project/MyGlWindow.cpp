@@ -423,7 +423,7 @@ void MyGlWindow::update() {
     // const float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.003f;
     // Convert milliseconds to seconds with proper scaling and add maximum time step
     float duration = static_cast<float>(TimingData::get().lastFrameDuration) * 0.001f;  // Proper conversion from ms to seconds
-    const float maxTimeStep = 1.0f / 24.0f;  // Maximum 60 FPS equivalent
+    const float maxTimeStep = 1.0f;
     if (duration > maxTimeStep) {
         duration = maxTimeStep;
     }
@@ -435,7 +435,7 @@ void MyGlWindow::update() {
         return;
     }
 
-    timerSeconds += duration * 0.3f;
+    timerSeconds += duration;
 
     playerCube->setMovement(moveForward, moveBackward, moveLeft, moveRight);
     playerCube->update(duration);

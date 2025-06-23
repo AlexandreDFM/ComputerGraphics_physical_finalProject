@@ -60,17 +60,17 @@ void PlayerHole::update(float duration) {
 
     // Normalize diagonal movement
     if (moveForward && moveLeft) {
-        velocity.x = -moveSpeed * 0.7071f;
-        velocity.z = -moveSpeed * 0.7071f;
+        velocity.x = -moveSpeed;
+        velocity.z = -moveSpeed;
     } else if (moveForward && moveRight) {
-        velocity.x = moveSpeed * 0.7071f;
-        velocity.z = -moveSpeed * 0.7071f;
+        velocity.x = moveSpeed;
+        velocity.z = -moveSpeed;
     } else if (moveBackward && moveLeft) {
-        velocity.x = -moveSpeed * 0.7071f;
-        velocity.z = moveSpeed * 0.7071f;
+        velocity.x = -moveSpeed;
+        velocity.z = moveSpeed;
     } else if (moveBackward && moveRight) {
-        velocity.x = moveSpeed * 0.7071f;
-        velocity.z = moveSpeed * 0.7071f;
+        velocity.x = moveSpeed;
+        velocity.z = moveSpeed;
     } else {
         if (moveForward)
             velocity.z = -moveSpeed;
@@ -84,7 +84,7 @@ void PlayerHole::update(float duration) {
 
     // Update position
     cyclone::Vector3 currentPos = body->getPosition();
-    cyclone::Vector3 newPos = currentPos + velocity * duration;
+    cyclone::Vector3 newPos = currentPos + velocity * duration * 3.0f;
 
     // Clamp position to stay within [-100, 100] range in x and z
     // This ensures the player hole does not move out of bounds
@@ -183,7 +183,7 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
             currentBody->addForce(pullForce);
             
 
-            if (distance < swallowRadius * 0.7f) {
+            if (distance < swallowRadius * 0.8f) {
                 // Deactivate the floor for the box take normal gravity
                 // currentBody->setDamping(0.9f, 0.9f);
                 // currentBody->setAcceleration(cyclone::Vector3::GRAVITY * 0);
@@ -195,7 +195,7 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
             }
 
             // Check if the object is very close to be considered swallowed
-            if (distance < swallowRadius * 0.1f) {
+            if (distance < swallowRadius * 0.2f) {
                 simplePhysics->removeBox(currentBody);
                  it = objects.erase(it);
                 swallowRadius += 0.1f;

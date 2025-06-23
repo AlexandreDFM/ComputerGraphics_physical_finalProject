@@ -38,7 +38,7 @@ public:
         body->setMass(1.0f);
 
         cyclone::Matrix3 tensor;
-        tensor.setBlockInertiaTensor(halfSize, 2.0f);
+        tensor.setBlockInertiaTensor(halfSize, 1.0f);
         body->setInertiaTensor(tensor);
 
         body->setLinearDamping(0.98f);
@@ -194,9 +194,9 @@ public:
         contacts = new cyclone::Contact[maxContacts];
         cData = new cyclone::CollisionData();
         cData->contactArray = contacts;
-        resolver = new cyclone::ContactResolver(maxContacts, maxContacts, 0.01f, 0.01f);
+        resolver = new cyclone::ContactResolver(maxContacts * 2, maxContacts * 2, 0.001f, 0.001f);
         // Initialize vector with new Box objects
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 500; i++) {
             boxData.push_back(new Box());
         }
         reset();

@@ -52,13 +52,13 @@ void SimplePhysics::generateContacts() {
         }
 
          //Check for collisions with each other box
-         /*for (auto other: boxData) {
-             if (!other->isValid())
-                 continue;
-             if (!cData->hasMoreContacts())
-                 return;
-             cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
-         }*/
+         //for (auto other: boxData) {
+         //    if (!other->isValid())
+         //        continue;
+         //    if (!cData->hasMoreContacts())
+         //        return;
+         //    cyclone::CollisionDetector::boxAndBox(*box, *other, cData);
+         //}
     }
 }
 
