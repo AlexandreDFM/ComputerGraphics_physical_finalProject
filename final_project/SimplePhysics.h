@@ -45,7 +45,7 @@ public:
         body->setAngularDamping(0.8f);
         body->clearAccumulators();
         body->setAcceleration(cyclone::Vector3(0, -9.81f, 0));
-        body->setAwake(true);
+        body->setAwake(awake);
         body->setCanSleep(true);
 
         body->calculateDerivedData();
@@ -62,7 +62,7 @@ public:
     void startDragging() {
         isBeingDragged = true;
         body->setAwake(true);
-        body->setCanSleep(false);
+        //body->setCanSleep(false);
         body->setAcceleration(cyclone::Vector3(0, 0, 0));
         body->setVelocity(cyclone::Vector3(0, 0, 0));
         body->setRotation(cyclone::Vector3(0, 0, 0));
@@ -70,7 +70,7 @@ public:
 
     void stopDragging() {
         isBeingDragged = false;
-        body->setCanSleep(true);
+        //body->setCanSleep(true);
         body->setAcceleration(cyclone::Vector3(0, -9.81f, 0));
     }
 
@@ -181,11 +181,12 @@ private:
     bool valid = true;
     bool swallowed = false;
     Mesh mesh;
+    bool awake = true;
 };
 
 class SimplePhysics {
 public:
-    static const unsigned maxContacts = 2048;
+    static const unsigned maxContacts = 5096;
     std::vector<Box*> boxData;
     cyclone::Contact* contacts;
     cyclone::CollisionData* cData;
@@ -197,7 +198,7 @@ public:
         cData->contactArray = contacts;
         resolver = new cyclone::ContactResolver(maxContacts * 2, maxContacts * 2, 0.001f, 0.001f);
         // Initialize vector with new Box objects
-        for (int i = 0; i < 500; i++) {
+        for (int i = 0; i < 100; i++) {
             boxData.push_back(new Box());
         }
         reset();

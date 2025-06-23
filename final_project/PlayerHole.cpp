@@ -197,8 +197,8 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
             // Check if the object is very close to be considered swallowed
             if (distance < swallowRadius * 0.1f) {
                 simplePhysics->removeBox(currentBody);
-                // it = objects.erase(it);
-                //swallowRadius += 0.1f;
+                 it = objects.erase(it);
+                swallowRadius += 0.1f;
                 score->addToScore(1);
                 continue;
             }
@@ -207,7 +207,7 @@ void PlayerHole::checkSwallowObjects(std::vector<cyclone::RigidBody *> &objects)
         if (objectPosition.y < -5.0f) {
             simplePhysics->removeBox(currentBody);
             it = objects.erase(it);
-             //swallowRadius += 0.1f;
+             swallowRadius += 0.1f;
             score->addToScore(1);
             continue;
         }
