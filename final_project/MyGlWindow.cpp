@@ -94,7 +94,7 @@ void MyGlWindow::createGameObjects() {
 
     playerCube->setSimplePhysics(simplePhysics);
     playerCube->setScore(score);
-    simplePhysics->update(0.3f);
+    //simplePhysics->update(0.3f);
 
     // Integrate model into the physics system
     AddModelToRigidBodies(*simplePhysics);
@@ -400,7 +400,15 @@ void MyGlWindow::reset() {
 
     // Reset playerCube and physics state
     if (playerCube) playerCube->setPosition(cyclone::Vector3(0, 2, 0));
-    if (simplePhysics) simplePhysics->reset();
+    for (auto body: gameRigidBodies) {
+        if (body != playerCube->getBody() && body != floor->getBody()) {
+            delete body;
+        }
+    }
+    gameRigidBodies.clear();
+    delete simplePhysics;
+
+    createGameObjects();
 
     // Optionally, reset movement flags
     moveForward = moveBackward = moveLeft = moveRight = false;
