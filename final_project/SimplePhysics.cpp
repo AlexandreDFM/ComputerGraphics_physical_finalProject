@@ -15,7 +15,7 @@ void SimplePhysics::reset() {
         const float scale = sizeDist(gen);
         cyclone::Vector3 extents(1.0f, 2.0f, 1.0f);
         extents *= scale;
-        cyclone::Vector3 position(posDist(gen), 5, posDist(gen));
+        cyclone::Vector3 position(posDist(gen), heightDist(gen), posDist(gen));
         cyclone::Quaternion orientation;
 
         box->setState(position, orientation, extents, cyclone::Vector3(0, 0, 0));
@@ -32,7 +32,7 @@ void SimplePhysics::generateContacts() {
     // Create the ground plane
     cyclone::CollisionPlane plane;
     plane.direction = cyclone::Vector3(0, 1, 0);
-    plane.offset = 1;
+    plane.offset = 0;
 
     // Check collisions with ground and between boxes
     for (auto box: boxData) {
